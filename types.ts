@@ -39,6 +39,13 @@ export interface ContainerInfo {
   root: boolean;
 }
 
+export interface ExportableApplication {
+  name: string; // Display name, e.g., "Mozilla Firefox"
+  appName: string; // The .desktop file name, e.g., "firefox.desktop"
+  containerName: string;
+  isExported: boolean;
+}
+
 
 export interface DependencyStatus {
   name: 'distrobox' | 'podman';
@@ -69,6 +76,9 @@ export interface IElectronAPI {
   containerCommit: (name: string, imageName: string, imageTag: string) => Promise<void>;
   containerInfo: (name: string) => Promise<ContainerInfo>;
   getTerminal: () => Promise<string | null>;
+  listApplications: () => Promise<ExportableApplication[]>;
+  applicationExport: (args: { containerName: string, appName: string }) => Promise<void>;
+  applicationUnexport: (args: { containerName: string, appName: string }) => Promise<void>;
 }
 
 declare global {
@@ -77,4 +87,4 @@ declare global {
   }
 }
 
-export type Page = 'my-containers' | 'create-new' | 'local-images' | 'download-images' | 'system-info';
+export type Page = 'my-containers' | 'create-new' | 'applications' | 'local-images' | 'download-images' | 'system-info';

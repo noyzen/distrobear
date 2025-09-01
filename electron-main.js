@@ -659,6 +659,82 @@ ipcMain.handle('container-info', async (event, name) => {
   }
 });
 
+
+// Application Management IPC handlers
+ipcMain.handle('list-applications', async () => {
+    // 1. Get all container names
+    const psOutput = await runCommand('podman', ['ps', '-a', '--filter', 'label=manager=distrobox', '--format', '{{.Names}}']).catch(() => '');
+    const containerNames = psOutput.split('\n').filter(Boolean);
+
+    if (containerNames.length === 0) {
+        return [];
+    }
+
+    // 2. Map over containers to find all apps in parallel
+    const allAppsPromises = containerNames.map(async (containerName) => {
+        try {
+            // 2a. Get exported apps for this container
+            const exportedOutput = await runCommand('distrobox', ['export', '--list', '-n', containerName]).catch(() => '');
+            const exportedApps = new Set(
+                exportedOutput.split('\n').map(line => line.split(' ')[0].trim()).filter(Boolean)
+            );
+
+            // 2b. Find all .desktop files
+            const findCommand = `find /usr/share/applications /usr/local/share/applications ~/.local/share/applications -path '*/.local/share/applications' -prune -o -name "*.desktop" -type f -print 2>/dev/null`;
+            const findOutput = await runCommand('distrobox', ['enter', containerName, '--', 'sh', '-c', findCommand]).catch(() => '');
+            if (!findOutput) return [];
+            const desktopFiles = findOutput.split('\n').filter(Boolean);
+
+            // 2c. For each desktop file, get its details
+            const appDetailsPromises = desktopFiles.map(async (desktopFile) => {
+                try {
+                    const appName = path.basename(desktopFile); // e.g., 'firefox.desktop'
+                    const appIdentifier = appName.replace(/\.desktop$/, '');
+
+                    const getNameCommand = `awk -F= '/^Name=/{print $2; exit}' '${desktopFile.replace(/'/g, "'\\''")}'`;
+                    const displayName = await runCommand('distrobox', ['enter', containerName, '--', 'sh', '-c', getNameCommand]);
+
+                    // Ignore apps without a display name or that are hidden
+                    if (!displayName || displayName.toLowerCase().includes('wayland')) return null;
+
+                    return {
+                        name: displayName.trim(),
+                        appName: appName,
+                        containerName: containerName,
+                        isExported: exportedApps.has(appIdentifier)
+                    };
+                } catch (e) {
+                    console.error(`Error processing desktop file ${desktopFile} in ${containerName}: ${e.message}`);
+                    return null;
+                }
+            });
+
+            return (await Promise.all(appDetailsPromises)).filter(Boolean);
+        } catch (e) {
+            console.error(`Error listing applications for container ${containerName}: ${e.message}`);
+            return []; // Return empty array for this container if it fails
+        }
+    });
+
+    const nestedApps = await Promise.all(allAppsPromises);
+    // 3. Flatten, sort and return
+    return nestedApps.flat().sort((a, b) => a.name.localeCompare(b.name));
+});
+
+ipcMain.handle('application-export', async (event, { containerName, appName }) => {
+  const sanitizedContainer = String(containerName).replace(/[^a-zA-Z0-9-_\.]/g, '');
+  const sanitizedApp = String(appName).replace(/[^a-zA-Z0-9-_\.\s]/g, '');
+  if (!sanitizedContainer || !sanitizedApp) throw new Error('Invalid arguments');
+  return await runCommand('distrobox', ['export', '--app', sanitizedApp, '-n', sanitizedContainer]);
+});
+
+ipcMain.handle('application-unexport', async (event, { containerName, appName }) => {
+  const sanitizedContainer = String(containerName).replace(/[^a-zA-Z0-9-_\.]/g, '');
+  const sanitizedApp = String(appName).replace(/[^a-zA-Z0-9-_\.\s]/g, '');
+  if (!sanitizedContainer || !sanitizedApp) throw new Error('Invalid arguments');
+  return await runCommand('distrobox', ['export', '--app', sanitizedApp, '-n', sanitizedContainer, '--delete']);
+});
+
 ipcMain.on('window-minimize', () => BrowserWindow.getFocusedWindow()?.minimize());
 ipcMain.on('window-maximize', () => {
   const window = BrowserWindow.getFocusedWindow();

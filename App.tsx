@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import MyContainers from './pages/MyContainers';
 import SystemInfo from './pages/SystemInfo';
+import Applications from './pages/Applications';
 import TitleBar from './components/TitleBar';
 import SetupWizard from './pages/SetupWizard';
 import type { Page, DependencyCheckResult } from './types';
@@ -45,6 +46,8 @@ const App: React.FC = () => {
     switch (currentPage) {
       case 'my-containers':
         return <MyContainers setCurrentPage={setCurrentPage} />;
+      case 'applications':
+        return <Applications />;
       case 'system-info':
         return <SystemInfo onRerunSetup={handleRerunSetup} />;
       case 'create-new':
