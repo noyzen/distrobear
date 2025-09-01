@@ -782,11 +782,29 @@ ipcMain.handle('application-export', async (event, { containerName, appName }) =
 
   // Distrobox expects the app name WITHOUT the .desktop suffix.
   const appIdentifier = sanitizedApp.replace(/\.desktop$/, '');
-
-  // As per user feedback, the correct and most robust method is to run the
-  // `distrobox-export` command from *inside* the container via `distrobox enter`.
   const args = ['enter', sanitizedContainer, '--', 'distrobox-export', '--app', appIdentifier];
-  return await runCommand('distrobox', args);
+  
+  await runCommand('distrobox', args);
+
+  // Poll to ensure the filesystem is consistent before the UI refreshes.
+  // This prevents a race condition where the UI reloads before the file is fully written.
+  const hostAppPath = path.join(os.homedir(), '.local', 'share', 'applications', sanitizedApp);
+  const expectedContent = `X-Distrobox-Container=${sanitizedContainer}`;
+  
+  for (let i = 0; i < 20; i++) { // Poll for up to 1 second
+    try {
+      const content = await fs.readFile(hostAppPath, 'utf-8');
+      if (content.includes(expectedContent)) {
+        console.log(`[INFO] Confirmed export for ${sanitizedApp}`);
+        return; // Success, file is consistent
+      }
+    } catch (e) {
+      // Ignore errors (e.g., file not found yet)
+    }
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  
+  console.warn(`[WARN] Polling for ${sanitizedApp} consistency timed out after export.`);
 });
 
 ipcMain.handle('application-unexport', async (event, { containerName, appName }) => {
@@ -796,10 +814,26 @@ ipcMain.handle('application-unexport', async (event, { containerName, appName })
 
   // Distrobox expects the app name WITHOUT the .desktop suffix.
   const appIdentifier = sanitizedApp.replace(/\.desktop$/, '');
-
-  // The unexport command must also be run from inside the container.
   const args = ['enter', sanitizedContainer, '--', 'distrobox-export', '--app', appIdentifier, '--delete'];
-  return await runCommand('distrobox', args);
+
+  await runCommand('distrobox', args);
+
+  // Poll to ensure the file has been deleted before the UI refreshes.
+  const hostAppPath = path.join(os.homedir(), '.local', 'share', 'applications', sanitizedApp);
+  
+  for (let i = 0; i < 20; i++) { // Poll for up to 1 second
+    try {
+      await fs.access(hostAppPath); // This will throw if file doesn't exist
+    } catch (e) {
+      if (e.code === 'ENOENT') {
+        console.log(`[INFO] Confirmed unexport for ${sanitizedApp}`);
+        return; // Success, file is gone
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+
+  console.warn(`[WARN] Polling for ${sanitizedApp} deletion timed out after unexport.`);
 });
 
 
