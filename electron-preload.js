@@ -27,8 +27,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   listApplications: () => ipcRenderer.invoke('list-applications'),
   applicationExport: (args) => ipcRenderer.invoke('application-export', args),
   applicationUnexport: (args) => ipcRenderer.invoke('application-unexport', args),
-  // Container Creation
+  // Image Management
   listLocalImages: () => ipcRenderer.invoke('list-local-images'),
+  imageDelete: (imageIdentifier) => ipcRenderer.invoke('image-delete', imageIdentifier),
+  imageExport: (imageIdentifier) => ipcRenderer.invoke('image-export', imageIdentifier),
+  imageImport: () => ipcRenderer.invoke('image-import'),
   containerCreate: (options) => ipcRenderer.invoke('container-create', options),
   onCreationLog: (callback) => ipcRenderer.on('creation-log', (_event, log) => callback(log)),
 });

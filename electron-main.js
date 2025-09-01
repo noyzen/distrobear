@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const os = require('os');
 const { exec, spawn } = require('child_process');
@@ -281,6 +281,15 @@ function runCommand(command, args = [], options = {}) {
   });
 }
 
+async function getContainerRuntime() {
+  const usePodman = await commandExists('podman');
+  if (usePodman) return 'podman';
+  const useDocker = await commandExists('docker');
+  if (useDocker) return 'docker';
+  throw new Error('No container runtime (Podman or Docker) found.');
+}
+
+
 async function detectTerminalEmulator() {
     const checkOrder = [
         'ptyxis', 'gnome-terminal', 'konsole', 'xfce4-terminal', 
@@ -391,18 +400,7 @@ ipcMain.handle('container-enter', async (event, name) => {
 
 ipcMain.handle('list-containers', async () => {
   try {
-    const usePodman = await commandExists('podman');
-    const useDocker = await commandExists('docker');
-    let command;
-
-    if (usePodman) {
-      command = 'podman';
-    } else if (useDocker) {
-      command = 'docker';
-    } else {
-      throw new Error('No container runtime (Podman or Docker) found.');
-    }
-
+    const command = await getContainerRuntime();
     const psArgs = ['ps', '-a', '--filter', 'label=manager=distrobox', '--format', '{{.Names}}\t{{.Image}}\t{{.Status}}'];
     const output = await runCommand(command, psArgs);
     if (!output) return [];
@@ -606,19 +604,8 @@ ipcMain.handle('container-info', async (event, name) => {
     throw new Error('Invalid container name provided.');
   }
   try {
-    const usePodman = await commandExists('podman');
-    const useDocker = await commandExists('docker');
-    let backendCmd, backendName;
-
-    if (usePodman) {
-      backendCmd = 'podman';
-      backendName = 'podman';
-    } else if (useDocker) {
-      backendCmd = 'docker';
-      backendName = 'docker';
-    } else {
-      throw new Error('No container runtime (Podman or Docker) found.');
-    }
+    const backendCmd = await getContainerRuntime();
+    const backendName = backendCmd;
 
     // 1. Get detailed info from the container backend. This is the single source of truth.
     const inspectOutput = await runCommand(backendCmd, ['inspect', sanitizedName]);
@@ -682,21 +669,10 @@ ipcMain.handle('container-info', async (event, name) => {
   }
 });
 
-// Container Creation
+// Container Creation & Image Management
 ipcMain.handle('list-local-images', async () => {
   try {
-    const usePodman = await commandExists('podman');
-    const useDocker = await commandExists('docker');
-    let command;
-
-    if (usePodman) {
-      command = 'podman';
-    } else if (useDocker) {
-      command = 'docker';
-    } else {
-      throw new Error('No container runtime (Podman or Docker) found.');
-    }
-
+    const command = await getContainerRuntime();
     // Format: REPOSITORY:TAG<TAB>SIZE<TAB>ID<TAB>CREATED
     const imagesArgs = ['images', '--format', '{{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.ID}}\t{{.Created}}'];
     const output = await runCommand(command, imagesArgs);
@@ -717,6 +693,73 @@ ipcMain.handle('list-local-images', async () => {
     throw err;
   }
 });
+
+ipcMain.handle('image-delete', async (event, imageIdentifier) => {
+  // Sanitize to prevent command injection. Allows repo/name:tag format.
+  const sanitizedIdentifier = String(imageIdentifier).replace(/[`$();|&<>]/g, '');
+  if (!sanitizedIdentifier) {
+    throw new Error('Invalid image identifier provided.');
+  }
+  try {
+    const runtime = await getContainerRuntime();
+    // Use --force to remove images even if they are used by stopped containers.
+    // This is generally safe and expected behavior for a GUI management tool.
+    await runCommand(runtime, ['rmi', '--force', sanitizedIdentifier]);
+  } catch (err) {
+    throw new Error(`Failed to delete image "${sanitizedIdentifier}": ${err.message}`);
+  }
+});
+
+ipcMain.handle('image-export', async (event, imageIdentifier) => {
+  const sanitizedIdentifier = String(imageIdentifier).replace(/[`$();|&<>]/g, '');
+  if (!sanitizedIdentifier) {
+    throw new Error('Invalid image identifier provided.');
+  }
+  
+  const defaultFileName = `${sanitizedIdentifier.replace(/[:/]/g, '_')}.tar`;
+
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export Image',
+    defaultPath: defaultFileName,
+    filters: [{ name: 'Tar Archive', extensions: ['tar'] }]
+  });
+
+  if (canceled || !filePath) {
+    return { success: false, message: 'Export canceled by user.' };
+  }
+
+  try {
+    const runtime = await getContainerRuntime();
+    await runCommand(runtime, ['save', '-o', filePath, sanitizedIdentifier]);
+    return { success: true, message: `Image successfully exported to ${filePath}` };
+  } catch (err) {
+    throw new Error(`Failed to export image "${sanitizedIdentifier}": ${err.message}`);
+  }
+});
+
+ipcMain.handle('image-import', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    title: 'Import Image',
+    properties: ['openFile'],
+    filters: [{ name: 'Tar Archive', extensions: ['tar'] }]
+  });
+
+  if (canceled || !filePaths || filePaths.length === 0) {
+    return { success: false, message: 'Import canceled by user.' };
+  }
+
+  const filePath = filePaths[0];
+
+  try {
+    const runtime = await getContainerRuntime();
+    // Use runCommand to get the output, as it contains useful info
+    const output = await runCommand(runtime, ['load', '-i', filePath]);
+    return { success: true, message: `Import successful:\n${output}` };
+  } catch (err) {
+    throw new Error(`Failed to import image from "${filePath}": ${err.message}`);
+  }
+});
+
 
 ipcMain.handle('container-create', async (event, options) => {
   const logToFrontend = (data) => mainWindow.webContents.send('creation-log', data.toString());

@@ -103,6 +103,9 @@ export interface IElectronAPI {
   applicationExport: (args: { containerName: string, appName: string }) => Promise<void>;
   applicationUnexport: (args: { containerName: string, appName: string }) => Promise<void>;
   listLocalImages: () => Promise<LocalImage[]>;
+  imageDelete: (imageIdentifier: string) => Promise<void>;
+  imageExport: (imageIdentifier: string) => Promise<{ success: boolean; message: string }>;
+  imageImport: () => Promise<{ success: boolean; message: string }>;
   containerCreate: (options: CreateContainerOptions) => Promise<void>;
   onCreationLog: (callback: (log: string) => void) => void;
 }

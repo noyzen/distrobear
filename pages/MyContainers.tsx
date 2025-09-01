@@ -733,7 +733,9 @@ const MyContainers: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setC
   return (
     <div className="container mx-auto">
       <header className="flex flex-wrap justify-between items-center mb-6 gap-4">
-        <h1 className="text-3xl font-bold text-gray-100 w-full md:w-auto">My Containers</h1>
+        <h1 className="text-3xl font-bold text-gray-100 w-full md:w-auto">
+          My Containers <span className="text-lg text-gray-400 font-normal">({containers.length})</span>
+        </h1>
         
         <div className="flex-grow flex flex-col-reverse sm:flex-row justify-end items-center gap-4 w-full md:w-auto">
             <div className="relative w-full sm:max-w-xs">
