@@ -170,9 +170,9 @@ ipcMain.handle('install-dependencies', async () => {
 
 /**
  * A robust helper for running shell commands.
- * Uses `spawn` for better handling of I/O and avoids buffer issues.
- * It prepares a clean environment with the correct PATH and without conflicting
- * variables like those from NVM.
+ * It executes the given command inside a login shell to ensure the user's full
+ * environment (PATH, etc.) is loaded, which is critical for tools like distrobox.
+ * It also prepares a clean environment without conflicting variables from NVM.
  * @param {string} command The command to execute (e.g., 'distrobox').
  * @param {string[]} [args=[]] An array of arguments for the command.
  * @returns {Promise<string>} A promise that resolves with the command's stdout.
@@ -180,15 +180,18 @@ ipcMain.handle('install-dependencies', async () => {
 function runCommand(command, args = []) {
   return new Promise((resolve, reject) => {
     const commandToRunForLogging = `${command} ${args.map(a => `'${a}'`).join(' ')}`;
-
-    // Create a clean environment for the child process.
-    // This includes the modified PATH and removes the problematic nvm variable.
-    const spawnEnv = { ...execOptions.env };
-    delete spawnEnv.npm_config_prefix;
     
-    console.log(`[INFO] Spawning: ${commandToRunForLogging}`);
+    // We must execute distrobox within a login shell (`bash -l -c`) to ensure
+    // that the full user environment is loaded. This is critical for tools like
+    // podman to connect to their services.
+    const shellCommand = command + ' ' + args.map(a => `'${a}'`).join(' ');
 
-    const child = spawn(command, args, { env: spawnEnv });
+    const spawnEnv = { ...execOptions.env };
+    delete spawnEnv.npm_config_prefix; // Prevents conflicts with NVM
+    
+    console.log(`[INFO] Spawning via login shell: ${shellCommand}`);
+
+    const child = spawn('/bin/bash', ['-l', '-c', shellCommand], { env: spawnEnv });
 
     let stdout = '';
     let stderr = '';
@@ -218,6 +221,7 @@ function runCommand(command, args = []) {
   });
 }
 
+
 ipcMain.handle('list-containers', async () => {
   try {
     const output = await runCommand('distrobox', ['list', '--no-color']);
@@ -236,7 +240,7 @@ ipcMain.handle('container-start', async (event, name) => {
       throw new Error('Invalid container name provided.');
   }
   try {
-    // Use 'start' for non-interactive startup, not 'enter'
+    // Use 'start' for non-interactive startup
     return await runCommand('distrobox', ['start', sanitizedName]);
   } catch (err) {
     throw new Error(`Failed to start container "${sanitizedName}": ${err.message}`);
