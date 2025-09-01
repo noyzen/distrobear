@@ -39,6 +39,7 @@ export interface IElectronAPI {
   containerAutostartEnable: (name: string) => Promise<void>;
   containerAutostartDisable: (name: string) => Promise<void>;
   containerEnter: (name: string) => Promise<void>;
+  containerDelete: (name: string) => Promise<void>;
   getTerminal: () => Promise<string | null>;
 }
 

@@ -526,6 +526,19 @@ ipcMain.handle('container-autostart-disable', async (event, name) => {
   await runCommand('systemctl', ['--user', 'daemon-reload']);
 });
 
+ipcMain.handle('container-delete', async (event, name) => {
+  const sanitizedName = String(name).replace(/[^a-zA-Z0-9-_\.]/g, '');
+  if (!sanitizedName) {
+    throw new Error('Invalid container name provided.');
+  }
+  try {
+    // Use '--yes' to bypass the interactive confirmation prompt,
+    // as confirmation is handled on the frontend.
+    return await runCommand('distrobox', ['rm', '--yes', sanitizedName]);
+  } catch(err) {
+    throw new Error(`Failed to delete container "${sanitizedName}": ${err.message}`);
+  }
+});
 
 ipcMain.on('window-minimize', () => BrowserWindow.getFocusedWindow()?.minimize());
 ipcMain.on('window-maximize', () => {

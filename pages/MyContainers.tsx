@@ -4,6 +4,56 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // --- Local Components for MyContainers Page ---
 
+const ConfirmationModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: string;
+}> = ({ isOpen, onClose, onConfirm, title, message }) => {
+  useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
+  
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <motion.div
+        className="bg-primary-light rounded-lg shadow-xl p-6 w-full max-w-md border border-primary"
+        onClick={e => e.stopPropagation()}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+      >
+        <h2 className="text-2xl font-bold text-gray-100">{title}</h2>
+        <p className="text-gray-400 mt-4">{message}</p>
+        <div className="flex justify-end gap-4 mt-8">
+          <button
+            onClick={onClose}
+            className="px-6 py-2 bg-primary text-gray-200 font-semibold rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => { onConfirm(); onClose(); }}
+            className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+
 const StatusIndicator: React.FC<{ status: string }> = ({ status }) => {
   const isUp = status.toLowerCase().startsWith('up');
   return (
@@ -90,6 +140,7 @@ const ContainerRow: React.FC<{
 }> = ({ container, isSelected, onSelect, onActionComplete, isLast }) => {
   const [isActionInProgress, setIsActionInProgress] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
 
   // Optimistic state for the autostart toggle
   const [optimisticAutostartEnabled, setOptimisticAutostartEnabled] = useState(container.isAutostartEnabled);
@@ -101,7 +152,7 @@ const ContainerRow: React.FC<{
   
   const isUp = container.status.toLowerCase().startsWith('up');
 
-  const performAction = async (action: 'start' | 'stop' | 'autostart-enable' | 'autostart-disable') => {
+  const performAction = async (action: 'start' | 'stop' | 'autostart-enable' | 'autostart-disable' | 'delete') => {
     setIsActionInProgress(true);
     setActionError(null);
     try {
@@ -110,6 +161,7 @@ const ContainerRow: React.FC<{
         case 'stop': await window.electronAPI.containerStop(container.name); break;
         case 'autostart-enable': await window.electronAPI.containerAutostartEnable(container.name); break;
         case 'autostart-disable': await window.electronAPI.containerAutostartDisable(container.name); break;
+        case 'delete': await window.electronAPI.containerDelete(container.name); break;
       }
       onActionComplete();
     } catch (err) {
@@ -154,7 +206,11 @@ const ContainerRow: React.FC<{
     
     // Perform the backend action
     performAction(newAutostartState ? 'autostart-enable' : 'autostart-disable');
-  }
+  };
+
+  const handleConfirmDelete = () => {
+    performAction('delete');
+  };
 
   return (
     <motion.div 
@@ -233,6 +289,22 @@ const ContainerRow: React.FC<{
                     </div>
                     <ToggleSwitch isOn={optimisticAutostartEnabled} onToggle={handleAutostartToggle} disabled={isActionInProgress} />
                 </div>
+                
+                <div className="pt-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="font-semibold text-red-400">Danger Zone</p>
+                            <p className="text-xs text-gray-500">This action cannot be undone.</p>
+                        </div>
+                        <button
+                            onClick={() => setDeleteModalOpen(true)}
+                            disabled={isActionInProgress}
+                            className="px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-red-600 text-white hover:bg-red-500 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
+                        >
+                            Delete
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {actionError && (
@@ -248,6 +320,17 @@ const ContainerRow: React.FC<{
               </motion.div>
             )}
           </motion.section>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {isDeleteModalOpen && (
+            <ConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title={`Delete "${container.name}"?`}
+                message="Are you sure? All data inside this container will be permanently lost."
+            />
         )}
       </AnimatePresence>
     </motion.div>
