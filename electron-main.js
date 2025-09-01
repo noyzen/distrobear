@@ -143,56 +143,95 @@ ipcMain.handle('install-dependencies', async () => {
 });
 
 
-ipcMain.handle('list-containers', async () => {
+/**
+ * A robust helper for running shell commands.
+ * Uses `spawn` for better handling of I/O and avoids buffer issues.
+ * Executes commands within a login shell (`bash -l -c`) to ensure the
+ * full user environment (PATH, DBUS, etc.) is available.
+ * @param {string} command The command to execute (e.g., 'distrobox').
+ * @param {string[]} [args=[]] An array of arguments for the command.
+ * @returns {Promise<string>} A promise that resolves with the command's stdout.
+ */
+function runCommand(command, args = []) {
   return new Promise((resolve, reject) => {
-    // Execute in a login shell to ensure correct user environment for podman/docker
-    const command = '/bin/bash -l -c "distrobox list --no-color --verbose"';
-    exec(command, execOptions, (error, stdout, stderr) => {
-      if (error) {
-        if (stderr.includes("command not found")) {
-           return reject(new Error('Distrobox command not found. Is distrobox installed and in your PATH?'));
-        }
-        return reject(new Error(`Error executing distrobox: ${stderr}`));
+    // Basic shell-quoting for args to prevent injection vulnerabilities.
+    const quotedArgs = args.map(arg => `'${String(arg).replace(/'/g, "'\\''")}'`);
+    const fullCommandString = `${command} ${quotedArgs.join(' ')}`;
+    
+    const shell = '/bin/bash';
+    const shellArgs = ['-l', '-c', fullCommandString];
+    
+    console.log(`[DEBUG] Spawning: ${shell} ${shellArgs.join(' ')}`);
+
+    const child = spawn(shell, shellArgs, { env: execOptions.env, shell: false });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (data) => {
+      const log = data.toString();
+      console.log(`[DEBUG] stdout chunk: ${log.trim()}`);
+      stdout += log;
+    });
+
+    child.stderr.on('data', (data) => {
+      const log = data.toString();
+      // Log stderr as error for better visibility in logs
+      console.error(`[DEBUG] stderr chunk: ${log.trim()}`);
+      stderr += log;
+    });
+
+    child.on('close', (code) => {
+      console.log(`[DEBUG] Command "${fullCommandString}" finished with code ${code}`);
+      if (code !== 0) {
+        console.error(`[ERROR] Command "${fullCommandString}" failed. Stderr:\n${stderr}`);
+        reject(new Error(stderr.trim() || `Process exited with code ${code}`));
+      } else {
+        resolve(stdout.trim());
       }
-      resolve(parseDistroboxList(stdout));
+    });
+
+    child.on('error', (err) => {
+      console.error(`[ERROR] Failed to start subprocess for "${fullCommandString}": ${err.message}`);
+      reject(err);
     });
   });
+}
+
+ipcMain.handle('list-containers', async () => {
+  try {
+    const output = await runCommand('distrobox', ['list', '--no-color', '--verbose']);
+    return parseDistroboxList(output);
+  } catch (err) {
+    if (err.message && err.message.includes("command not found")) {
+      throw new Error('Distrobox command not found. Is distrobox installed and in your PATH?');
+    }
+    throw new Error(`Failed to list containers: ${err.message}`);
+  }
 });
 
 ipcMain.handle('container-start', async (event, name) => {
-  return new Promise((resolve, reject) => {
-    // Basic sanitization to prevent command injection
-    const sanitizedName = String(name).replace(/[^a-zA-Z0-9-_\.]/g, '');
-    if (!sanitizedName) {
-        return reject(new Error('Invalid container name provided.'));
-    }
-    const command = `/bin/bash -l -c "distrobox start ${sanitizedName}"`;
-    exec(command, execOptions, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Failed to start container ${sanitizedName}: ${stderr}`);
-        return reject(new Error(stderr));
-      }
-      resolve(stdout);
-    });
-  });
+  const sanitizedName = String(name).replace(/[^a-zA-Z0-9-_\.]/g, '');
+  if (!sanitizedName) {
+      throw new Error('Invalid container name provided.');
+  }
+  try {
+    return await runCommand('distrobox', ['start', sanitizedName]);
+  } catch (err) {
+    throw new Error(`Failed to start container "${sanitizedName}": ${err.message}`);
+  }
 });
 
 ipcMain.handle('container-stop', async (event, name) => {
-  return new Promise((resolve, reject) => {
-    // Basic sanitization to prevent command injection
-    const sanitizedName = String(name).replace(/[^a-zA-Z0-9-_\.]/g, '');
-    if (!sanitizedName) {
-        return reject(new Error('Invalid container name provided.'));
-    }
-    const command = `/bin/bash -l -c "distrobox stop ${sanitizedName}"`;
-    exec(command, execOptions, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Failed to stop container ${sanitizedName}: ${stderr}`);
-        return reject(new Error(stderr));
-      }
-      resolve(stdout);
-    });
-  });
+  const sanitizedName = String(name).replace(/[^a-zA-Z0-9-_\.]/g, '');
+  if (!sanitizedName) {
+    throw new Error('Invalid container name provided.');
+  }
+  try {
+    return await runCommand('distrobox', ['stop', sanitizedName]);
+  } catch(err) {
+    throw new Error(`Failed to stop container "${sanitizedName}": ${err.message}`);
+  }
 });
 
 

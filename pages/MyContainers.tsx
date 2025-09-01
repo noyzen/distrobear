@@ -34,15 +34,18 @@ const ContainerCard: React.FC<{
   onActionComplete: () => void;
 }> = ({ container, index, isSelected, onSelect, onActionComplete }) => {
   const [isActionInProgress, setIsActionInProgress] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const handleStop = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsActionInProgress(true);
+    setActionError(null);
     try {
       await window.electronAPI.containerStop(container.name);
       onActionComplete();
     } catch (err) {
       console.error("Failed to stop container:", err);
+      setActionError(err instanceof Error ? err.message : "An unknown error occurred.");
     } finally {
       setIsActionInProgress(false);
     }
@@ -51,11 +54,13 @@ const ContainerCard: React.FC<{
   const handleStart = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsActionInProgress(true);
+    setActionError(null);
     try {
       await window.electronAPI.containerStart(container.name);
       onActionComplete();
     } catch (err) {
       console.error("Failed to start container:", err);
+      setActionError(err instanceof Error ? err.message : "An unknown error occurred.");
     } finally {
       setIsActionInProgress(false);
     }
@@ -106,6 +111,17 @@ const ContainerCard: React.FC<{
                 </ActionButton>
               )}
             </div>
+            {actionError && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="p-3 border-t border-primary-light bg-red-900/50 text-red-300 text-xs"
+              >
+                <p className="font-sans font-bold mb-1">Action Failed</p>
+                <pre className="whitespace-pre-wrap break-words font-mono">{actionError}</pre>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
