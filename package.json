@@ -31,7 +31,7 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.example.distrobear",
+    "appId": "com.distrobear.app",
     "productName": "DistroBear",
     "files": [
       "dist/**/*",
@@ -39,13 +39,15 @@
       "electron-preload.js"
     ],
     "directories": {
+      "buildResources": "build",
       "output": "release"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "category": "Utility"
+      "category": "Utility",
+      "icon": "build/icon.svg"
     }
   }
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Page } from '../types';
 import { motion } from 'framer-motion';
+import Logo from './Logo';
 
 interface SidebarProps {
   currentPage: Page;
@@ -72,8 +73,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isOpen, 
         initial={false}
         animate={{ width: 256 }}
       >
-        <div className="flex items-center justify-center p-6 border-b border-primary-light">
-          <h1 className="text-2xl font-bold text-accent">DistroBear</h1>
+        <div className="flex items-center justify-center p-6 border-b space-x-2 border-primary-light">
+          <Logo className="w-10 h-10" />
+          <h1 className="text-2xl font-bold text-gray-100">DistroBear</h1>
         </div>
         <nav className="flex-1 p-4 space-y-2">
           {menuItems.map(item => (

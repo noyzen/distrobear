@@ -171,8 +171,8 @@ ipcMain.handle('install-dependencies', async () => {
 /**
  * A robust helper for running shell commands.
  * It executes the given command inside a login shell to ensure the user's full
- * environment (PATH, etc.) is loaded, which is critical for tools like distrobox.
- * It also prepares a clean environment without conflicting variables from NVM.
+ * environment (PATH, etc.) is loaded. It also unsets conflicting environment
+ * variables (like from NVM) within the shell right before execution.
  * @param {string} command The command to execute (e.g., 'distrobox').
  * @param {string[]} [args=[]] An array of arguments for the command.
  * @returns {Promise<string>} A promise that resolves with the command's stdout.
@@ -181,16 +181,21 @@ function runCommand(command, args = []) {
   return new Promise((resolve, reject) => {
     const commandToRunForLogging = `${command} ${args.map(a => `'${a}'`).join(' ')}`;
     
-    // We must execute distrobox within a login shell (`bash -l -c`) to ensure
-    // that the full user environment is loaded. This is critical for tools like
-    // podman to connect to their services.
-    const shellCommand = command + ' ' + args.map(a => `'${a}'`).join(' ');
+    // Construct the full command to be run inside the shell.
+    // We prepend `unset` to sanitize the environment from known problematic variables
+    // that might be set by shell startup scripts (`.bashrc`, etc.).
+    const commandString = [command, ...args.map(a => `'${a}'`)].join(' ');
+    const shellCommand = `unset npm_config_prefix; ${commandString}`;
 
+    // Pass the user's environment to the shell, which is critical.
+    // The programmatic `delete` is no longer necessary as the shell command handles it.
     const spawnEnv = { ...execOptions.env };
-    delete spawnEnv.npm_config_prefix; // Prevents conflicts with NVM
     
     console.log(`[INFO] Spawning via login shell: ${shellCommand}`);
 
+    // We must execute distrobox within a login shell (`bash -l -c`) to ensure
+    // that the full user environment is loaded. This is critical for tools like
+    // podman to connect to their services.
     const child = spawn('/bin/bash', ['-l', '-c', shellCommand], { env: spawnEnv });
 
     let stdout = '';
