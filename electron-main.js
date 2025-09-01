@@ -18,7 +18,7 @@ function createWindow() {
 
   // Load the Vite dev server URL in development, or the built HTML file in production.
   if (app.isPackaged) {
-    mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+    mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
   } else {
     mainWindow.loadURL(viteDevServerURL);
     // Open DevTools for debugging, only in development
