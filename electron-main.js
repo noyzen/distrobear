@@ -415,23 +415,21 @@ ipcMain.handle('list-containers', async () => {
       const serviceName = `container-${name}.service`;
       const isAutostartEnabled = await isSystemdServiceEnabled(serviceName);
 
-      // Inspect each container to check its home mount configuration.
-      // This is the most reliable way to determine if it's isolated.
       let isIsolated = true; // Assume isolated unless proven otherwise.
       try {
         const inspectOutput = await runCommand(command, ['inspect', name]);
         const inspectData = JSON.parse(inspectOutput)[0];
-        // A standard (non-isolated) distrobox will have a bind mount
-        // where the source is the host's home directory.
-        if (inspectData && inspectData.Mounts) {
+
+        if (inspectData && Array.isArray(inspectData.Mounts)) {
+          // A standard (non-isolated) distrobox will have a bind mount
+          // where the source is the host's home directory.
           const hasHostHomeMount = inspectData.Mounts.some(
             mount => mount.Source === hostHome && mount.Type === 'bind'
           );
           isIsolated = !hasHostHomeMount;
         }
       } catch (inspectErr) {
-        console.error(`[WARN] Could not inspect container "${name}" to check for isolation: ${inspectErr.message}`);
-        // Keep isIsolated as true (or false) as a safe default if inspect fails.
+        console.warn(`[WARN] Could not inspect container "${name}" to check for isolation. Assuming isolated. Error: ${inspectErr.message}`);
       }
 
       return { name, image, status, isAutostartEnabled, isIsolated };
@@ -630,16 +628,30 @@ ipcMain.handle('container-info', async (event, name) => {
     // 2. Get container size using its unique ID for accuracy
     const sizeOutput = await runCommand(backendCmd, ['ps', '-a', '--filter', `id=${inspectData.Id}`, '--format', '{{.Size}}']);
 
-    // 3. Parse and combine all data from inspect and ps. No more `distrobox info`.
+    // 3. Determine if container is isolated and format home directory string
+    const hostHome = os.homedir();
+    const isIsolated = inspectData.Mounts && Array.isArray(inspectData.Mounts)
+        ? !inspectData.Mounts.some(mount => mount.Source === hostHome && mount.Type === 'bind')
+        : true; // Assume isolated if mounts can't be read
+
+    let home_dir_display = 'N/A';
+    if (isIsolated) {
+        const homeMount = inspectData.Mounts.find(m => m.Destination && m.Destination.startsWith('/home/'));
+        if (homeMount && homeMount.Source) {
+            home_dir_display = `${homeMount.Source} (Isolated)`;
+        } else {
+            home_dir_display = 'Isolated (Internal Volume)';
+        }
+    } else {
+        home_dir_display = `${hostHome} (from Host)`;
+    }
+
+    // 4. Parse and combine all data from inspect and ps.
     
     // Format mounts from inspect data for better readability
     const formattedVolumes = (inspectData.Mounts || []).map(
         (mount) => `${mount.Source} -> ${mount.Destination} (${mount.Type}, ${mount.Mode || 'ro'})`
     );
-
-    // Determine home directory from mounts
-    const homeMount = inspectData.Mounts.find(m => m.Destination && m.Destination.startsWith('/home/'));
-    const home_dir = homeMount ? `${homeMount.Destination} (from ${homeMount.Type === 'bind' ? 'host' : 'volume'})` : 'N/A';
 
     const combinedInfo = {
         id: inspectData.Id.substring(0, 12),
@@ -652,12 +664,11 @@ ipcMain.handle('container-info', async (event, name) => {
         backend: backendName,
         size: sizeOutput.trim() || 'N/A',
 
-        home_dir: home_dir,
+        home_dir: home_dir_display, // Use the new formatted string
         user_name: inspectData.Config.User || 'N/A',
         hostname: inspectData.Config.Hostname || 'N/A',
         
         init: !!inspectData.HostConfig.Init,
-        // Check for NVIDIA devices or runtime.
         nvidia: !!(inspectData.HostConfig.Runtime === 'nvidia' || (inspectData.HostConfig.Devices && inspectData.HostConfig.Devices.some(d => d.PathOnHost.includes('nvidia')))),
         root: !inspectData.Config.User || inspectData.Config.User === 'root' || inspectData.Config.User === '0',
         
