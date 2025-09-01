@@ -33,7 +33,7 @@ const App: React.FC = () => {
   const renderPage = () => {
     switch (currentPage) {
       case 'my-containers':
-        return <MyContainers />;
+        return <MyContainers setCurrentPage={setCurrentPage} />;
       case 'system-info':
         return <SystemInfo />;
       case 'create-new':
@@ -41,7 +41,7 @@ const App: React.FC = () => {
       case 'download-images':
         return <div className="p-8 text-center"><h1 className="text-3xl font-bold">Coming Soon!</h1><p className="text-gray-400 mt-2">This page is under construction.</p></div>;
       default:
-        return <MyContainers />;
+        return <MyContainers setCurrentPage={setCurrentPage} />;
     }
   };
 

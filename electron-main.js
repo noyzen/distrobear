@@ -150,17 +150,14 @@ ipcMain.handle('list-containers', async () => {
 });
 
 // New IPC handlers for container actions
-ipcMain.handle('container-enter', async (event, name) => {
-  // This command opens a new terminal window and executes 'distrobox enter'.
-  // 'x-terminal-emulator' is a generic command that should use the default terminal on most Linux DEs.
-  const command = `x-terminal-emulator -e "distrobox enter ${name}"`;
+ipcMain.handle('container-start', async (event, name) => {
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout, stderr) => {
+    exec(`distrobox start ${name}`, (error, stdout, stderr) => {
       if (error) {
-        console.error(`Failed to enter container ${name}: ${stderr}`);
-        return reject(new Error(`Failed to open terminal. Make sure x-terminal-emulator is installed.`));
+        console.error(`Failed to start container ${name}: ${stderr}`);
+        return reject(new Error(stderr));
       }
-      resolve();
+      resolve(stdout);
     });
   });
 });

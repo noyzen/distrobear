@@ -1,26 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import type { Container } from '../types';
+import type { Container, Page } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const StatusIndicator: React.FC<{ status: string }> = ({ status }) => {
   const isUp = status.toLowerCase().startsWith('up');
   return (
     <div className="flex items-center">
-      <span className={`h-3 w-3 rounded-full mr-2 ${isUp ? 'bg-accent' : 'bg-gray-500'} animate-pulse`}></span>
+      <span className={`h-3 w-3 rounded-full mr-2 ${isUp ? 'bg-accent' : 'bg-gray-500'} ${isUp ? 'animate-pulse' : ''}`}></span>
       <span className={`${isUp ? 'text-accent-light' : 'text-gray-400'}`}>{status}</span>
     </div>
   );
 };
 
-const ActionButton: React.FC<{ onClick: (e: React.MouseEvent) => void; disabled: boolean; children: React.ReactNode; primary?: boolean }> = ({ onClick, disabled, children, primary = false }) => (
+const ActionButton: React.FC<{ onClick: (e: React.MouseEvent) => void; disabled: boolean; children: React.ReactNode; primary?: boolean; isStopButton?: boolean }> = ({ onClick, disabled, children, primary = false, isStopButton = false }) => (
   <button
     onClick={onClick}
     disabled={disabled}
     className={`flex-1 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 disabled:bg-gray-600 disabled:cursor-not-allowed
-      ${primary 
-        ? 'bg-accent text-charcoal hover:bg-accent-light' 
-        : 'bg-primary-light text-gray-300 hover:bg-red-500 hover:text-white'
-      }`}
+      ${primary ? 'bg-accent text-charcoal hover:bg-accent-light' : ''}
+      ${isStopButton ? 'bg-primary-light text-gray-300 hover:bg-red-500 hover:text-white' : ''}
+      `}
   >
     {children}
   </button>
@@ -44,18 +43,21 @@ const ContainerCard: React.FC<{
       onActionComplete();
     } catch (err) {
       console.error("Failed to stop container:", err);
-      // You could add a toast notification here for better UX
     } finally {
       setIsActionInProgress(false);
     }
   };
 
-  const handleEnter = async (e: React.MouseEvent) => {
+  const handleStart = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    setIsActionInProgress(true);
     try {
-      await window.electronAPI.containerEnter(container.name);
+      await window.electronAPI.containerStart(container.name);
+      onActionComplete();
     } catch (err) {
-      console.error("Failed to enter container:", err);
+      console.error("Failed to start container:", err);
+    } finally {
+      setIsActionInProgress(false);
     }
   };
   
@@ -94,12 +96,13 @@ const ContainerCard: React.FC<{
             onClick={(e) => e.stopPropagation()} // Prevents closing when clicking the action area
           >
             <div className="p-4 border-t border-primary-light bg-primary-dark/30 flex items-center space-x-3">
-               <ActionButton onClick={handleEnter} disabled={isActionInProgress} primary>
-                Enter
-              </ActionButton>
-              {isUp && (
-                <ActionButton onClick={handleStop} disabled={isActionInProgress}>
+              {isUp ? (
+                <ActionButton onClick={handleStop} disabled={isActionInProgress} isStopButton>
                   {isActionInProgress ? 'Stopping...' : 'Stop'}
+                </ActionButton>
+              ) : (
+                <ActionButton onClick={handleStart} disabled={isActionInProgress} primary>
+                  {isActionInProgress ? 'Starting...' : 'Start'}
                 </ActionButton>
               )}
             </div>
@@ -111,7 +114,7 @@ const ContainerCard: React.FC<{
 };
 
 
-const MyContainers: React.FC = () => {
+const MyContainers: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCurrentPage }) => {
   const [containers, setContainers] = useState<Container[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,7 +143,7 @@ const MyContainers: React.FC = () => {
   };
 
   const renderContent = () => {
-    if (isLoading) {
+    if (isLoading && containers.length === 0) {
       return <p className="text-center text-gray-400">Loading containers...</p>;
     }
     if (error) {
@@ -180,15 +183,23 @@ const MyContainers: React.FC = () => {
   
   return (
     <div className="container mx-auto">
-      <header className="flex justify-between items-center mb-6">
+      <header className="flex justify-between items-center mb-6 gap-4">
         <h1 className="text-3xl font-bold text-gray-100">My Containers</h1>
-        <button
-            onClick={fetchContainers}
-            disabled={isLoading}
-            className="px-5 py-2 bg-accent text-charcoal font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-300"
-        >
-          {isLoading ? 'Refreshing...' : 'Refresh'}
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+              onClick={() => setCurrentPage('create-new')}
+              className="px-5 py-2 bg-primary-light text-gray-200 font-bold rounded-lg hover:bg-accent hover:text-charcoal transition-all duration-300"
+          >
+            Create New
+          </button>
+          <button
+              onClick={fetchContainers}
+              disabled={isLoading}
+              className="px-5 py-2 bg-accent text-charcoal font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-300"
+          >
+            {isLoading ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
       </header>
       {renderContent()}
     </div>
