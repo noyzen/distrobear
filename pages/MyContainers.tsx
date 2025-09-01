@@ -89,7 +89,7 @@ const ContainerRow: React.FC<{
         className={`
             relative transition-all duration-300 ease-in-out
             ${ isSelected
-                ? 'z-10 scale-[1.02] my-1 rounded-lg border border-accent shadow-[0_0_20px_theme(colors.accent.DEFAULT)_/_50%]'
+                ? 'z-10 scale-[1.02] my-1 rounded-lg border-[3px] border-accent shadow-[0_0_8px_theme(colors.accent.light),0_0_25px_theme(colors.accent.DEFAULT)_/_60%]'
                 : `z-0 scale-100 border-b ${isLast ? 'border-transparent' : 'border-primary-light'}`
             }
         `}
