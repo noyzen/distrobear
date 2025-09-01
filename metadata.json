@@ -1,5 +1,5 @@
 {
-  "name": "Distrobox GUI",
+  "name": "DistroBear",
   "description": "A desktop GUI application to manage your distrobox containers, built with Electron, React, and TypeScript.",
   "requestFramePermissions": []
 }

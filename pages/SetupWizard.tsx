@@ -71,8 +71,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ setupInfo, onSetupComplete })
         transition={{ duration: 0.5 }}
       >
         <header className="text-center">
-          <h1 className="text-4xl font-bold text-accent">Welcome!</h1>
-          <p className="text-gray-400 mt-2">Let's get your system ready to use Distrobox GUI.</p>
+          <h1 className="text-4xl font-bold text-accent">Welcome to DistroBear!</h1>
+          <p className="text-gray-400 mt-2">Let's get your system ready to manage containers with ease.</p>
         </header>
 
         <div className="space-y-3">

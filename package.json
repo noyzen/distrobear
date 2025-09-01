@@ -1,5 +1,5 @@
 {
-  "name": "distrobox-gui",
+  "name": "distrobear",
   "version": "1.0.0",
   "description": "A GUI to manage distrobox containers",
   "main": "electron-main.js",
@@ -31,8 +31,8 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.example.distrobox-gui",
-    "productName": "Distrobox GUI",
+    "appId": "com.example.distrobear",
+    "productName": "DistroBear",
     "files": [
       "dist/**/*",
       "electron-main.js",

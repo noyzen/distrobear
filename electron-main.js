@@ -106,7 +106,7 @@ ipcMain.handle('install-dependencies', async () => {
     echo "--- Installation Complete ---"
   `;
   
-  const options = { name: 'Distrobox GUI Setup' };
+  const options = { name: 'DistroBear Setup' };
 
   return new Promise((resolve, reject) => {
     const child = sudo.exec(fullCommand, options, (error, stdout, stderr) => {
@@ -163,11 +163,14 @@ ipcMain.handle('container-start', async (event, name) => {
 });
 
 ipcMain.handle('container-stop', async (event, name) => {
+  const command = `distrobox stop ${name}`;
+  const options = { name: `DistroBear Action` };
+
   return new Promise((resolve, reject) => {
-    exec(`distrobox stop ${name}`, (error, stdout, stderr) => {
+    sudo.exec(command, options, (error, stdout, stderr) => {
       if (error) {
-        console.error(`Failed to stop container ${name}: ${stderr}`);
-        return reject(new Error(stderr));
+        console.error(`Failed to stop container ${name} with sudo: ${error}`);
+        return reject(new Error(stderr || error.message));
       }
       resolve(stdout);
     });

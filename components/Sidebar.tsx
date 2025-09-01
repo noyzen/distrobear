@@ -73,7 +73,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isOpen, 
         animate={{ width: 256 }}
       >
         <div className="flex items-center justify-center p-6 border-b border-primary-light">
-          <h1 className="text-2xl font-bold text-accent">Distrobox GUI</h1>
+          <h1 className="text-2xl font-bold text-accent">DistroBear</h1>
         </div>
         <nav className="flex-1 p-4 space-y-2">
           {menuItems.map(item => (

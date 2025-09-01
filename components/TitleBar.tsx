@@ -15,7 +15,7 @@ const TitleBar: React.FC = () => {
 
   return (
     <header className="draggable-region flex items-center justify-between h-10 bg-primary-dark pl-4 pr-2 select-none">
-      <div className="text-sm font-semibold text-gray-300">Distrobox GUI</div>
+      <div className="text-sm font-semibold text-gray-300">DistroBear</div>
       <div className="flex items-center space-x-1 non-draggable-region">
         <button onClick={handleMinimize} className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-primary-light">
           <MinimizeIcon />
