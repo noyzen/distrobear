@@ -145,7 +145,9 @@ ipcMain.handle('install-dependencies', async () => {
 
 ipcMain.handle('list-containers', async () => {
   return new Promise((resolve, reject) => {
-    exec('distrobox list --no-color --verbose', execOptions, (error, stdout, stderr) => {
+    // Execute in a login shell to ensure correct user environment for podman/docker
+    const command = '/bin/bash -l -c "distrobox list --no-color --verbose"';
+    exec(command, execOptions, (error, stdout, stderr) => {
       if (error) {
         if (stderr.includes("command not found")) {
            return reject(new Error('Distrobox command not found. Is distrobox installed and in your PATH?'));
@@ -157,12 +159,17 @@ ipcMain.handle('list-containers', async () => {
   });
 });
 
-// New IPC handlers for container actions
 ipcMain.handle('container-start', async (event, name) => {
   return new Promise((resolve, reject) => {
-    exec(`distrobox start ${name}`, execOptions, (error, stdout, stderr) => {
+    // Basic sanitization to prevent command injection
+    const sanitizedName = String(name).replace(/[^a-zA-Z0-9-_\.]/g, '');
+    if (!sanitizedName) {
+        return reject(new Error('Invalid container name provided.'));
+    }
+    const command = `/bin/bash -l -c "distrobox start ${sanitizedName}"`;
+    exec(command, execOptions, (error, stdout, stderr) => {
       if (error) {
-        console.error(`Failed to start container ${name}: ${stderr}`);
+        console.error(`Failed to start container ${sanitizedName}: ${stderr}`);
         return reject(new Error(stderr));
       }
       resolve(stdout);
@@ -172,9 +179,15 @@ ipcMain.handle('container-start', async (event, name) => {
 
 ipcMain.handle('container-stop', async (event, name) => {
   return new Promise((resolve, reject) => {
-    exec(`distrobox stop ${name}`, execOptions, (error, stdout, stderr) => {
+    // Basic sanitization to prevent command injection
+    const sanitizedName = String(name).replace(/[^a-zA-Z0-9-_\.]/g, '');
+    if (!sanitizedName) {
+        return reject(new Error('Invalid container name provided.'));
+    }
+    const command = `/bin/bash -l -c "distrobox stop ${sanitizedName}"`;
+    exec(command, execOptions, (error, stdout, stderr) => {
       if (error) {
-        console.error(`Failed to stop container ${name}: ${stderr}`);
+        console.error(`Failed to stop container ${sanitizedName}: ${stderr}`);
         return reject(new Error(stderr));
       }
       resolve(stdout);
