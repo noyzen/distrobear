@@ -1,0 +1,5 @@
+{
+  "name": "Electron React Node GUI",
+  "description": "A desktop application boilerplate using Electron, React, and TypeScript, styled with Tailwind CSS. It demonstrates communication between the frontend and the Node.js backend (Electron's main process).",
+  "requestFramePermissions": []
+}
