@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import MyContainers from './pages/MyContainers';
 import SystemInfo from './pages/SystemInfo';
+import TitleBar from './components/TitleBar';
 import type { Page } from './types';
 
 const App: React.FC = () => {
@@ -25,18 +26,21 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-charcoal font-sans">
-      <Sidebar 
-        currentPage={currentPage} 
-        setCurrentPage={setCurrentPage}
-        isOpen={isSidebarOpen}
-        setIsOpen={setSidebarOpen}
-      />
-      <main className="flex-1 overflow-y-auto transition-all duration-300">
-        <div className="p-4 md:p-8">
-          {renderPage()}
-        </div>
-      </main>
+    <div className="flex flex-col h-screen bg-charcoal font-sans rounded-lg overflow-hidden shadow-2xl">
+      <TitleBar />
+      <div className="flex flex-1 h-full overflow-hidden">
+        <Sidebar 
+          currentPage={currentPage} 
+          setCurrentPage={setCurrentPage}
+          isOpen={isSidebarOpen}
+          setIsOpen={setSidebarOpen}
+        />
+        <main className="flex-1 overflow-y-auto transition-all duration-300">
+          <div className="p-4 md:p-8">
+            {renderPage()}
+          </div>
+        </main>
+      </div>
     </div>
   );
 };

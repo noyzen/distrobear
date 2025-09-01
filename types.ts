@@ -16,6 +16,10 @@ export interface Container {
 export interface IElectronAPI {
   getOSInfo: () => Promise<OSInfo>;
   listContainers: () => Promise<Container[]>;
+  minimizeWindow: () => void;
+  maximizeWindow: () => void;
+  closeWindow: () => void;
+  onWindowStateChange: (callback: (isMaximized: boolean) => void) => void;
 }
 
 declare global {

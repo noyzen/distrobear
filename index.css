@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Required for transparent window with rounded corners */
+body {
+  background: transparent;
+}
+
+/* Custom styles for Electron's draggable title bar */
+.draggable-region {
+  -webkit-app-region: drag;
+}
+.non-draggable-region {
+  -webkit-app-region: no-drag;
+}
+
 /* Custom scrollbar for a more integrated look */
 ::-webkit-scrollbar {
   width: 8px;
