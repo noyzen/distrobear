@@ -12,4 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   checkDependencies: () => ipcRenderer.invoke('check-dependencies'),
   installDependencies: () => ipcRenderer.invoke('install-dependencies'),
   onInstallationLog: (callback) => ipcRenderer.on('installation-log', (_event, log) => callback(log)),
+  // Container Actions
+  containerEnter: (name) => ipcRenderer.invoke('container-enter', name),
+  containerStop: (name) => ipcRenderer.invoke('container-stop', name),
 });

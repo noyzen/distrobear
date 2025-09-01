@@ -6,16 +6,67 @@ const StatusIndicator: React.FC<{ status: string }> = ({ status }) => {
   const isUp = status.toLowerCase().startsWith('up');
   return (
     <div className="flex items-center">
-      <span className={`h-3 w-3 rounded-full mr-2 ${isUp ? 'bg-accent' : 'bg-gray-500'}`}></span>
+      <span className={`h-3 w-3 rounded-full mr-2 ${isUp ? 'bg-accent' : 'bg-gray-500'} animate-pulse`}></span>
       <span className={`${isUp ? 'text-accent-light' : 'text-gray-400'}`}>{status}</span>
     </div>
   );
 };
 
-const ContainerCard: React.FC<{ container: Container; index: number }> = ({ container, index }) => {
+const ActionButton: React.FC<{ onClick: (e: React.MouseEvent) => void; disabled: boolean; children: React.ReactNode; primary?: boolean }> = ({ onClick, disabled, children, primary = false }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className={`flex-1 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 disabled:bg-gray-600 disabled:cursor-not-allowed
+      ${primary 
+        ? 'bg-accent text-charcoal hover:bg-accent-light' 
+        : 'bg-primary-light text-gray-300 hover:bg-red-500 hover:text-white'
+      }`}
+  >
+    {children}
+  </button>
+);
+
+
+const ContainerCard: React.FC<{ 
+  container: Container; 
+  index: number; 
+  isSelected: boolean;
+  onSelect: () => void;
+  onActionComplete: () => void;
+}> = ({ container, index, isSelected, onSelect, onActionComplete }) => {
+  const [isActionInProgress, setIsActionInProgress] = useState(false);
+
+  const handleStop = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsActionInProgress(true);
+    try {
+      await window.electronAPI.containerStop(container.name);
+      onActionComplete();
+    } catch (err) {
+      console.error("Failed to stop container:", err);
+      // You could add a toast notification here for better UX
+    } finally {
+      setIsActionInProgress(false);
+    }
+  };
+
+  const handleEnter = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await window.electronAPI.containerEnter(container.name);
+    } catch (err) {
+      console.error("Failed to enter container:", err);
+    }
+  };
+  
+  const isUp = container.status.toLowerCase().startsWith('up');
+
   return (
     <motion.div
-      className="bg-primary rounded-lg shadow-lg overflow-hidden border border-primary-light transform transition-transform duration-300 hover:scale-105 hover:border-accent"
+      layout
+      onClick={onSelect}
+      className={`bg-primary rounded-lg shadow-lg overflow-hidden border border-primary-light cursor-pointer transition-all duration-300
+        ${isSelected ? 'ring-2 ring-accent shadow-accent/20' : 'hover:border-accent/50'}`}
       variants={{
         hidden: { opacity: 0, y: 20 },
         visible: { opacity: 1, y: 0 },
@@ -24,7 +75,6 @@ const ContainerCard: React.FC<{ container: Container; index: number }> = ({ cont
       animate="visible"
       exit="hidden"
       transition={{ duration: 0.3, delay: index * 0.05 }}
-      layout
     >
       <div className="p-5">
         <h3 className="text-xl font-bold text-gray-100 truncate">{container.name}</h3>
@@ -33,6 +83,29 @@ const ContainerCard: React.FC<{ container: Container; index: number }> = ({ cont
       <div className="px-5 py-3 bg-primary-dark/50">
         <StatusIndicator status={container.status} />
       </div>
+      <AnimatePresence>
+        {isSelected && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+            onClick={(e) => e.stopPropagation()} // Prevents closing when clicking the action area
+          >
+            <div className="p-4 border-t border-primary-light bg-primary-dark/30 flex items-center space-x-3">
+               <ActionButton onClick={handleEnter} disabled={isActionInProgress} primary>
+                Enter
+              </ActionButton>
+              {isUp && (
+                <ActionButton onClick={handleStop} disabled={isActionInProgress}>
+                  {isActionInProgress ? 'Stopping...' : 'Stop'}
+                </ActionButton>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
@@ -42,9 +115,10 @@ const MyContainers: React.FC = () => {
   const [containers, setContainers] = useState<Container[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedContainer, setSelectedContainer] = useState<string | null>(null);
 
   const fetchContainers = async () => {
-    setIsLoading(true);
+    // Don't set loading to true on refresh to avoid UI flicker
     setError(null);
     try {
       const result = await window.electronAPI.listContainers();
@@ -60,6 +134,10 @@ const MyContainers: React.FC = () => {
   useEffect(() => {
     fetchContainers();
   }, []);
+  
+  const handleSelectContainer = (name: string) => {
+    setSelectedContainer(prev => (prev === name ? null : name));
+  };
 
   const renderContent = () => {
     if (isLoading) {
@@ -82,16 +160,21 @@ const MyContainers: React.FC = () => {
       )
     }
     return (
-      <AnimatePresence>
-        <motion.div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          layout
-        >
-          {containers.map((container, index) => (
-            <ContainerCard key={container.name} container={container} index={index} />
-          ))}
-        </motion.div>
-      </AnimatePresence>
+      <motion.div 
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        layout
+      >
+        {containers.map((container, index) => (
+          <ContainerCard 
+            key={container.name} 
+            container={container} 
+            index={index}
+            isSelected={selectedContainer === container.name}
+            onSelect={() => handleSelectContainer(container.name)}
+            onActionComplete={fetchContainers}
+          />
+        ))}
+      </motion.div>
     );
   };
   

@@ -33,6 +33,8 @@ export interface IElectronAPI {
   checkDependencies: () => Promise<DependencyCheckResult>;
   installDependencies: () => Promise<void>;
   onInstallationLog: (callback: (log: string) => void) => void;
+  containerEnter: (name: string) => Promise<void>;
+  containerStop: (name: string) => Promise<void>;
 }
 
 declare global {
