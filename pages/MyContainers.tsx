@@ -47,8 +47,6 @@ const ChevronIcon: React.FC<{ isSelected: boolean }> = ({ isSelected }) => (
     </motion.svg>
 );
 
-// FIX: The `title` attribute on the SVG element was causing a TypeScript error.
-// Replaced it with a <title> child element, which is the recommended approach for accessibility and also resolves the type error.
 const LightningBoltIcon: React.FC<{ className?: string; title?: string; }> = ({ className, title }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className}>
         {title && <title>{title}</title>}
@@ -86,6 +84,14 @@ const ContainerRow: React.FC<{
 }> = ({ container, isSelected, onSelect, onActionComplete, isLast }) => {
   const [isActionInProgress, setIsActionInProgress] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Optimistic state for the autostart toggle
+  const [optimisticAutostartEnabled, setOptimisticAutostartEnabled] = useState(container.isAutostartEnabled);
+
+  // Effect to sync optimistic state with the true state from props when it changes.
+  useEffect(() => {
+    setOptimisticAutostartEnabled(container.isAutostartEnabled);
+  }, [container.isAutostartEnabled]);
   
   const isUp = container.status.toLowerCase().startsWith('up');
 
@@ -103,6 +109,10 @@ const ContainerRow: React.FC<{
     } catch (err) {
       console.error(`Failed to ${action} container:`, err);
       setActionError(err instanceof Error ? err.message : "An unknown error occurred.");
+      // If an autostart action failed, revert the optimistic state.
+      if (action.startsWith('autostart')) {
+        setOptimisticAutostartEnabled(container.isAutostartEnabled);
+      }
     } finally {
       setIsActionInProgress(false);
     }
@@ -115,7 +125,13 @@ const ContainerRow: React.FC<{
 
   const handleAutostartToggle = () => {
     if (isActionInProgress) return;
-    performAction(container.isAutostartEnabled ? 'autostart-disable' : 'autostart-enable');
+
+    // Optimistically update the UI state
+    const newAutostartState = !optimisticAutostartEnabled;
+    setOptimisticAutostartEnabled(newAutostartState);
+    
+    // Perform the backend action
+    performAction(newAutostartState ? 'autostart-enable' : 'autostart-disable');
   }
 
   return (
@@ -142,7 +158,7 @@ const ContainerRow: React.FC<{
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-bold text-gray-100 truncate">{container.name}</h3>
-            {container.isAutostartEnabled && <LightningBoltIcon className="w-4 h-4 text-yellow-400 flex-shrink-0" title="Autostart Enabled" />}
+            {optimisticAutostartEnabled && <LightningBoltIcon className="w-4 h-4 text-yellow-400 flex-shrink-0" title="Autostart Enabled" />}
           </div>
           <p className="text-xs text-gray-400 mt-1 truncate" title={container.image}>{container.image}</p>
         </div>
@@ -184,7 +200,7 @@ const ContainerRow: React.FC<{
                         <p className="font-semibold text-gray-200">Autostart on Boot</p>
                         <p className="text-xs text-gray-400">Requires Podman & systemd</p>
                     </div>
-                    <ToggleSwitch isOn={container.isAutostartEnabled} onToggle={handleAutostartToggle} disabled={isActionInProgress} />
+                    <ToggleSwitch isOn={optimisticAutostartEnabled} onToggle={handleAutostartToggle} disabled={isActionInProgress} />
                 </div>
             </div>
 
