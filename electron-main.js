@@ -81,30 +81,14 @@ function parseDistroboxList(output) {
 
   // Parse each grouped record by joining the parts from each line
   return rawRecords.map(recordLines => {
-    const nameParts = [];
-    const statusParts = [];
-    const imageParts = [];
+    // For NAME and IMAGE, we expect long strings that might wrap mid-word.
+    // Concatenating them directly is the correct approach.
+    const name = recordLines.map(line => getColumnValue(line, 'NAME')).filter(Boolean).join('');
+    const image = recordLines.map(line => getColumnValue(line, 'IMAGE')).filter(Boolean).join('');
 
-    for (const line of recordLines) {
-        nameParts.push(getColumnValue(line, 'NAME'));
-        statusParts.push(getColumnValue(line, 'STATUS'));
-        imageParts.push(getColumnValue(line, 'IMAGE'));
-    }
-
-    const customJoin = (parts) => {
-      // This reducer-based join is smarter than a simple .join(' ').
-      // It avoids adding a space if the previous part ends with a hyphen,
-      // which can happen with wrapped container names or other text.
-      return parts.filter(Boolean).reduce((acc, part) => {
-        if (!acc) return part;
-        if (acc.endsWith('-')) return acc + part;
-        return acc + ' ' + part;
-      }, '');
-    };
-
-    const name = customJoin(nameParts);
-    const status = customJoin(statusParts);
-    const image = customJoin(imageParts);
+    // For STATUS, parts are likely separate words if wrapped, so we join with a space
+    // and then normalize any resulting extra whitespace.
+    const status = recordLines.map(line => getColumnValue(line, 'STATUS')).filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
     
     if (!name || !status || !image) return null;
     
