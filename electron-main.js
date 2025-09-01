@@ -171,32 +171,36 @@ ipcMain.handle('install-dependencies', async () => {
 /**
  * A robust helper for running shell commands.
  * It executes the given command inside a login shell to ensure the user's full
- * environment (PATH, etc.) is loaded. It also unsets conflicting environment
- * variables (like from NVM) within the shell right before execution.
+ * environment (PATH, XDG_RUNTIME_DIR, etc.) is loaded, which is critical for
+ * tools like distrobox and podman.
+ * It also prepares a clean environment before spawning the shell to avoid
+ * conflicts with user startup scripts (e.g., nvm).
  * @param {string} command The command to execute (e.g., 'distrobox').
  * @param {string[]} [args=[]] An array of arguments for the command.
  * @returns {Promise<string>} A promise that resolves with the command's stdout.
  */
 function runCommand(command, args = []) {
   return new Promise((resolve, reject) => {
-    const commandToRunForLogging = `${command} ${args.map(a => `'${a}'`).join(' ')}`;
-    
-    // Construct the full command to be run inside the shell.
-    // We prepend `unset` to sanitize the environment from known problematic variables
-    // that might be set by shell startup scripts (`.bashrc`, etc.).
+    // Escape arguments to prevent shell injection and join into a single string.
     const commandString = [command, ...args.map(a => `'${a}'`)].join(' ');
-    const shellCommand = `unset npm_config_prefix; ${commandString}`;
-
-    // Pass the user's environment to the shell, which is critical.
-    // The programmatic `delete` is no longer necessary as the shell command handles it.
-    const spawnEnv = { ...execOptions.env };
     
-    console.log(`[INFO] Spawning via login shell: ${shellCommand}`);
+    // Create a sanitized environment for the login shell.
+    // 1. Start with the current process's environment.
+    // 2. Add the user's local bin directory to the PATH for distrobox.
+    // 3. Critically, delete the conflicting variable *before* spawning the shell.
+    const spawnEnv = {
+      ...process.env,
+      PATH: `${process.env.PATH || ''}:${path.join(os.homedir(), '.local', 'bin')}`
+    };
+    delete spawnEnv.npm_config_prefix;
+    
+    console.log(`[INFO] Spawning via login shell: ${commandString}`);
 
-    // We must execute distrobox within a login shell (`bash -l -c`) to ensure
-    // that the full user environment is loaded. This is critical for tools like
-    // podman to connect to their services.
-    const child = spawn('/bin/bash', ['-l', '-c', shellCommand], { env: spawnEnv });
+    // Execute the command within a login shell (`bash -l -c ...`).
+    // The shell will inherit our sanitized `spawnEnv`. When it sources the
+    // user's profile scripts, the conflicting variable will not be present,
+    // preventing nvm (or other tools) from failing during shell initialization.
+    const child = spawn('/bin/bash', ['-l', '-c', commandString], { env: spawnEnv });
 
     let stdout = '';
     let stderr = '';
@@ -210,6 +214,7 @@ function runCommand(command, args = []) {
     });
 
     child.on('close', (code) => {
+      const commandToRunForLogging = `${command} ${args.map(a => `'${a}'`).join(' ')}`;
       console.log(`[INFO] Command "${commandToRunForLogging}" finished with code ${code}`);
       if (code !== 0) {
         console.error(`[ERROR] Command "${commandToRunForLogging}" failed. Stderr:\n${stderr}`);
@@ -220,6 +225,7 @@ function runCommand(command, args = []) {
     });
 
     child.on('error', (err) => {
+      const commandToRunForLogging = `${command} ${args.map(a => `'${a}'`).join(' ')}`;
       console.error(`[ERROR] Failed to start subprocess for "${commandToRunForLogging}": ${err.message}`);
       reject(err);
     });
