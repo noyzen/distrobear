@@ -171,30 +171,24 @@ ipcMain.handle('install-dependencies', async () => {
 /**
  * A robust helper for running shell commands.
  * Uses `spawn` for better handling of I/O and avoids buffer issues.
- * Executes commands within a login shell (`bash -l -c`) to ensure the
- * full user environment (PATH, DBUS, etc.) is available.
- * It prevents conflicts with nvm by creating a clean environment for the child process.
+ * It prepares a clean environment with the correct PATH and without conflicting
+ * variables like those from NVM.
  * @param {string} command The command to execute (e.g., 'distrobox').
  * @param {string[]} [args=[]] An array of arguments for the command.
  * @returns {Promise<string>} A promise that resolves with the command's stdout.
  */
 function runCommand(command, args = []) {
   return new Promise((resolve, reject) => {
-    // Basic shell-quoting for args to prevent injection vulnerabilities.
-    const quotedArgs = args.map(arg => `'${String(arg).replace(/'/g, "'\\''")}'`);
-    const commandToRun = `${command} ${quotedArgs.join(' ')}`;
-    
-    const shell = '/bin/bash';
-    const shellArgs = ['-l', '-c', commandToRun];
+    const commandToRunForLogging = `${command} ${args.map(a => `'${a}'`).join(' ')}`;
 
-    // Create a copy of the environment and remove the problematic variable
-    // to prevent conflicts with nvm which can be sourced by the login shell.
+    // Create a clean environment for the child process.
+    // This includes the modified PATH and removes the problematic nvm variable.
     const spawnEnv = { ...execOptions.env };
     delete spawnEnv.npm_config_prefix;
     
-    console.log(`[INFO] Spawning: ${commandToRun}`);
+    console.log(`[INFO] Spawning: ${commandToRunForLogging}`);
 
-    const child = spawn(shell, shellArgs, { env: spawnEnv, shell: false });
+    const child = spawn(command, args, { env: spawnEnv });
 
     let stdout = '';
     let stderr = '';
@@ -208,9 +202,9 @@ function runCommand(command, args = []) {
     });
 
     child.on('close', (code) => {
-      console.log(`[INFO] Command "${commandToRun}" finished with code ${code}`);
+      console.log(`[INFO] Command "${commandToRunForLogging}" finished with code ${code}`);
       if (code !== 0) {
-        console.error(`[ERROR] Command "${commandToRun}" failed. Stderr:\n${stderr}`);
+        console.error(`[ERROR] Command "${commandToRunForLogging}" failed. Stderr:\n${stderr}`);
         reject(new Error(stderr.trim() || `Process exited with code ${code}`));
       } else {
         resolve(stdout.trim());
@@ -218,7 +212,7 @@ function runCommand(command, args = []) {
     });
 
     child.on('error', (err) => {
-      console.error(`[ERROR] Failed to start subprocess for "${commandToRun}": ${err.message}`);
+      console.error(`[ERROR] Failed to start subprocess for "${commandToRunForLogging}": ${err.message}`);
       reject(err);
     });
   });
@@ -242,7 +236,8 @@ ipcMain.handle('container-start', async (event, name) => {
       throw new Error('Invalid container name provided.');
   }
   try {
-    return await runCommand('distrobox', ['enter', sanitizedName]);
+    // Use 'start' for non-interactive startup, not 'enter'
+    return await runCommand('distrobox', ['start', sanitizedName]);
   } catch (err) {
     throw new Error(`Failed to start container "${sanitizedName}": ${err.message}`);
   }
