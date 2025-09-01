@@ -78,14 +78,14 @@ const isSystemdServiceEnabled = (serviceName) => {
 
 // IPC handler for dependency checking
 ipcMain.handle('check-dependencies', async () => {
-  const deps = ['distrobox', 'podman', 'docker'];
+  const deps = ['distrobox', 'podman'];
   const statuses = await Promise.all(deps.map(async (dep) => ({
     name: dep,
     isInstalled: await commandExists(dep),
   })));
 
   const distroboxOk = statuses.find(d => d.name === 'distrobox')?.isInstalled;
-  const containerRuntimeOk = statuses.find(d => d.name === 'podman')?.isInstalled || statuses.find(d => d.name === 'docker')?.isInstalled;
+  const containerRuntimeOk = statuses.find(d => d.name === 'podman')?.isInstalled;
   
   return {
     dependencies: statuses,

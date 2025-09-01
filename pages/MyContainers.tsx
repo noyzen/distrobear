@@ -134,6 +134,11 @@ const ContainerRow: React.FC<{
     setActionError(null);
     try {
         await window.electronAPI.containerEnter(container.name);
+        // If container was stopped, entering it starts it. Refresh the UI.
+        if (!isUp) {
+            // A short delay gives the backend time to update the container status.
+            setTimeout(() => onActionComplete(), 500);
+        }
     } catch (err) {
         console.error(`Failed to enter container:`, err);
         setActionError(err instanceof Error ? err.message : "An unknown error occurred.");

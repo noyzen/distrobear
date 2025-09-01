@@ -15,7 +15,7 @@ export interface Container {
 }
 
 export interface DependencyStatus {
-  name: 'distrobox' | 'podman' | 'docker';
+  name: 'distrobox' | 'podman';
   isInstalled: boolean;
 }
 

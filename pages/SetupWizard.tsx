@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 interface SetupWizardProps {
   setupInfo: DependencyCheckResult;
   onSetupComplete: () => void;
+  onSkip: () => void;
 }
 
 const DependencyItem: React.FC<{ status: DependencyStatus }> = ({ status }) => {
@@ -26,7 +27,7 @@ const DependencyItem: React.FC<{ status: DependencyStatus }> = ({ status }) => {
   );
 };
 
-const SetupWizard: React.FC<SetupWizardProps> = ({ setupInfo, onSetupComplete }) => {
+const SetupWizard: React.FC<SetupWizardProps> = ({ setupInfo, onSetupComplete, onSkip }) => {
   const [isInstalling, setIsInstalling] = useState(false);
   const [installationLogs, setInstallationLogs] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +80,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ setupInfo, onSetupComplete })
           <h2 className="text-xl font-semibold text-gray-200">Dependency Check</h2>
           {setupInfo.dependencies.map(dep => <DependencyItem key={dep.name} status={dep} />)}
           <p className="text-sm text-gray-500 pt-2">
-            A container runtime (Podman or Docker) and Distrobox are required. We recommend Podman.
+            A container runtime (Podman) and Distrobox are required.
           </p>
         </div>
 
@@ -100,7 +101,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ setupInfo, onSetupComplete })
             </div>
         )}
 
-        <footer className="flex justify-center pt-4">
+        <footer className="flex flex-col sm:flex-row items-center justify-center pt-4 gap-4">
           {isFinished ? (
             <button
               onClick={onSetupComplete}
@@ -109,13 +110,22 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ setupInfo, onSetupComplete })
               Continue to Application
             </button>
           ) : (
-            <button
-              onClick={handleInstall}
-              disabled={isInstalling}
-              className="px-8 py-3 bg-accent text-charcoal font-bold rounded-full hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-accent/50"
-            >
-              {isInstalling ? 'Installing...' : 'Begin Installation'}
-            </button>
+            <>
+              <button
+                onClick={handleInstall}
+                disabled={isInstalling}
+                className="px-8 py-3 bg-accent text-charcoal font-bold rounded-full hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-accent/50"
+              >
+                {isInstalling ? 'Installing...' : 'Begin Installation'}
+              </button>
+              <button
+                onClick={onSkip}
+                disabled={isInstalling}
+                className="px-8 py-3 bg-primary-light text-gray-200 font-bold rounded-full hover:bg-gray-600 transition-all duration-200 disabled:opacity-50"
+              >
+                Skip for now
+              </button>
+            </>
           )}
         </footer>
       </motion.div>

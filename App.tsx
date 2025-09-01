@@ -32,6 +32,10 @@ const App: React.FC = () => {
     setSetupInfo(result);
     setAppState('setup-required');
   };
+  
+  const handleSkipSetup = () => {
+    setAppState('ready');
+  };
 
   useEffect(() => {
     performDependencyCheck();
@@ -61,7 +65,7 @@ const App: React.FC = () => {
           </div>
         );
       case 'setup-required':
-        return <SetupWizard setupInfo={setupInfo!} onSetupComplete={performDependencyCheck} />;
+        return <SetupWizard setupInfo={setupInfo!} onSetupComplete={performDependencyCheck} onSkip={handleSkipSetup} />;
       case 'ready':
         return (
           <div className="flex flex-col h-screen bg-charcoal font-sans rounded-lg overflow-hidden shadow-2xl">
