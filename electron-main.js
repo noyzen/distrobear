@@ -681,41 +681,26 @@ ipcMain.handle('list-applications', async () => {
         return { applications: [], unscannedContainers };
     }
     
-    // Pre-build a map of exported apps on the host and which container they belong to.
-    // This is the most reliable way to check export status across all distrobox versions.
-    const exportedAppToContainerMap = new Map();
-    const hostAppsPath = path.join(os.homedir(), '.local', 'share', 'applications');
-    try {
-        const hostAppFiles = await fs.readdir(hostAppsPath);
-        const desktopFilesOnHost = hostAppFiles.filter(f => f.endsWith('.desktop'));
-
-        for (const filename of desktopFilesOnHost) {
-            try {
-                const filePath = path.join(hostAppsPath, filename);
-                const content = await fs.readFile(filePath, 'utf-8');
-                
-                // Use the reliable X-Distrobox-Container key instead of parsing the Exec line.
-                // This is the modern and correct way to identify exported apps.
-                const containerLineMatch = content.match(/^X-Distrobox-Container=(.*)$/m);
-                
-                if (containerLineMatch && containerLineMatch[1]) {
-                    const containerName = containerLineMatch[1].trim();
-                    if (containerName) {
-                        exportedAppToContainerMap.set(filename, containerName);
-                    }
-                }
-            } catch (e) {
-                // Ignore errors reading individual files (e.g., permission denied)
-                console.warn(`Could not read or parse host desktop file ${filename}: ${e.message}`);
-            }
+    // 2. For each running container, get a list of its exported applications using the
+    //    reliable `distrobox-export --list-apps` command. This is the correct way.
+    const exportedAppsByContainer = new Map();
+    await Promise.all(runningContainers.map(async ({ name: containerName }) => {
+        try {
+            const listAppsOutput = await runCommand(
+                'distrobox', 
+                ['enter', containerName, '--', 'distrobox-export', '--list-apps'],
+                { supressErrorLoggingForExitCodes: [1] } 
+            ).catch(() => ''); // Gracefully handle errors as "no apps exported"
+            
+            const exportedAppIdentifiers = new Set(listAppsOutput.split('\n').filter(Boolean));
+            exportedAppsByContainer.set(containerName, exportedAppIdentifiers);
+        } catch (e) {
+            console.warn(`[WARN] Could not list exported apps for ${containerName}: ${e.message}`);
+            exportedAppsByContainer.set(containerName, new Set()); // Ensure an entry exists
         }
-    } catch (e) {
-        if (e.code !== 'ENOENT') { // Ignore if the directory doesn't exist
-            console.error(`Error reading host applications directory ${hostAppsPath}: ${e.message}`);
-        }
-    }
+    }));
 
-    // 2. Map over ONLY running containers to find all apps in parallel
+    // 3. Map over ONLY running containers to find all available apps and check their status
     const allAppsPromises = runningContainers.map(async ({ name: containerName }) => {
         try {
             // Find all potential .desktop files within the container.
@@ -724,13 +709,16 @@ ipcMain.handle('list-applications', async () => {
             if (!findOutput) return [];
             const desktopFiles = findOutput.split('\n').filter(Boolean);
 
-            // For each file, get its details and check against our map of exported apps.
+            const exportedAppSet = exportedAppsByContainer.get(containerName) || new Set();
+
+            // For each file, get its details and check against our set of exported apps.
             const appDetailsPromises = desktopFiles.map(async (desktopFile) => {
                 try {
                     const appName = path.basename(desktopFile); // e.g., 'firefox.desktop'
+                    const appIdentifier = appName.replace(/\.desktop$/, '');
 
-                    // Determine if exported by checking the map we built.
-                    const isExported = exportedAppToContainerMap.get(appName) === containerName;
+                    // Determine if exported by checking the reliable set we built.
+                    const isExported = exportedAppSet.has(appIdentifier);
                     
                     // Get the display name from inside the container.
                     const escapedFile = `'${desktopFile.replace(/'/g, "'\\''")}'`;
@@ -771,7 +759,7 @@ ipcMain.handle('list-applications', async () => {
     const nestedApps = await Promise.all(allAppsPromises);
     const applications = nestedApps.flat().sort((a, b) => a.name.localeCompare(b.name));
 
-    // 3. Return the final payload
+    // 4. Return the final payload
     return { applications, unscannedContainers };
 });
 
