@@ -417,12 +417,18 @@ const ContainerRow: React.FC<{
                         </div>
                         <button
                             onClick={() => setSaveImageModalOpen(true)}
-                            disabled={isActionInProgress}
+                            disabled={isActionInProgress || !isUp}
+                            title={!isUp ? "Container must be running to save it as an image." : "Save a snapshot of the running container"}
                             className="px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-blue-600 text-white hover:bg-blue-500 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
                         >
                             Save as Image
                         </button>
                     </div>
+                     {!isUp && (
+                        <p className="text-xs text-yellow-500 text-right mt-1">
+                            Container must be running to save as an image.
+                        </p>
+                    )}
                 </div>
                 
                 <div className="pt-4">

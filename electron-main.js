@@ -562,10 +562,15 @@ ipcMain.handle('container-commit', async (event, name, imageName, imageTag) => {
   const fullImageName = `${sanitizedImageName}:${sanitizedImageTag}`;
 
   try {
-    // Corrected to use positional arguments for 'distrobox commit'
-    return await runCommand('distrobox', ['commit', sanitizedName, fullImageName]);
+    // Use `podman commit` directly as `distrobox commit` can be unreliable
+    // or unavailable in older versions. This is more robust and aligns with
+    // the user's feedback. This requires podman to be the container runtime.
+    if (!await commandExists('podman')) {
+      throw new Error('This feature requires Podman to be installed.');
+    }
+    return await runCommand('podman', ['commit', sanitizedName, fullImageName]);
   } catch(err) {
-    throw new Error(`Failed to commit container "${sanitizedName}": ${err.message}`);
+    throw new Error(`Failed to save container "${sanitizedName}" as image: ${err.message}`);
   }
 });
 
