@@ -695,49 +695,35 @@ ipcMain.handle('list-applications', async () => {
 
     // 3. Map over ONLY running containers to find all apps in parallel
     const allAppsPromises = runningContainers.map(async ({ name: containerName }) => {
-        
-        // Use a more robust regex to find and extract app identifiers for this container.
-        // This avoids potential pitfalls with substring manipulation if names contain hyphens.
-        const escapedContainerName = containerName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-        const appIdentifierRegex = new RegExp(`^distrobox-(.*?)-${escapedContainerName}\\.desktop$`);
-        
-        const exportedAppIdentifiers = new Set();
-        // We iterate over ALL exported files on the host and use the regex to both
-        // filter for the ones belonging to the current container and extract the app name.
-        for (const hostFile of exportedFilesOnHost) {
-          const match = hostFile.match(appIdentifierRegex);
-          // match[0] is the full string, match[1] is the first capture group (the app identifier)
-          if (match && match[1]) {
-            exportedAppIdentifiers.add(match[1]);
-          }
-        }
-        
         try {
-            // Find all .desktop files within the container
+            // Step 1: Find all potential .desktop files within the container.
             const findCommand = `find /usr/share/applications /usr/local/share/applications ~/.local/share/applications -path '*/.local/share/applications' -prune -o -name "*.desktop" -type f -print 2>/dev/null`;
             const findOutput = await runCommand('distrobox', ['enter', containerName, '--', 'sh', '-c', findCommand]).catch(() => '');
             if (!findOutput) return [];
             const desktopFiles = findOutput.split('\n').filter(Boolean);
 
+            // Step 2: For each file, check if it's exported and gather its details.
             const appDetailsPromises = desktopFiles.map(async (desktopFile) => {
                 try {
-                    const appName = path.basename(desktopFile); // e.g., 'audacious.desktop'
-                    const appIdentifier = appName.replace(/\.desktop$/, ''); // e.g., 'audacious'
+                    const appName = path.basename(desktopFile); // e.g., 'firefox.desktop'
+                    const appIdentifier = appName.replace(/\.desktop$/, ''); // e.g., 'firefox'
+
+                    // Step 2a: Determine if exported by checking for the exact filename on the host. This is robust.
+                    const expectedExportedFile = `distrobox-${appIdentifier}-${containerName}.desktop`;
+                    const isExported = exportedFilesOnHost.includes(expectedExportedFile);
                     
-                    // Check if this app identifier exists in our set of known exported apps for this container.
-                    const isExported = exportedAppIdentifiers.has(appIdentifier);
-                    
-                    // Get display name
+                    // Step 2b: Get the display name from inside the container.
                     const escapedFile = `'${desktopFile.replace(/'/g, "'\\''")}'`;
                     const getNameCommand = `grep -m 1 '^Name' ${escapedFile} | cut -d'=' -f2-`;
                     const displayName = await runCommand('distrobox', ['enter', containerName, '--', 'sh', '-c', getNameCommand]);
 
-                    // Check if it's a hidden entry
+                    // Step 2c: Check if the application is marked as hidden.
                     const getNoDisplayCommand = `grep -q '^NoDisplay=true' ${escapedFile}`;
                     const isHidden = await runCommand('distrobox', ['enter', containerName, '--', 'sh', '-c', getNoDisplayCommand], { supressErrorLoggingForExitCodes: [1] })
                         .then(() => true)
                         .catch(() => false);
 
+                    // Filter out hidden apps, apps without a name, or Wayland-specific entries we don't want.
                     if (!displayName || isHidden || displayName.toLowerCase().includes('wayland')) {
                         return null;
                     }
@@ -754,10 +740,11 @@ ipcMain.handle('list-applications', async () => {
                 }
             });
 
+            // Wait for all checks to complete and filter out any nulls from failed/skipped apps.
             return (await Promise.all(appDetailsPromises)).filter(Boolean);
         } catch (e) {
             console.error(`Error listing applications for container ${containerName}: ${e.message}`);
-            return [];
+            return []; // Return empty array for this container if a major error occurs.
         }
     });
 
