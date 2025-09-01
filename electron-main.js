@@ -667,25 +667,7 @@ ipcMain.handle('container-info', async (event, name) => {
 
 // Application Management IPC handlers
 ipcMain.handle('list-applications', async () => {
-    // 1. Get all exported apps in one go and parse them.
-    const exportedOutput = await runCommand('distrobox', ['export', '--list']).catch((err) => {
-        console.warn(`Could not list exported apps (distrobox version might be old): ${err.message}`);
-        return '';
-    });
-    const exportedAppsByContainer = new Map();
-    exportedOutput.split('\n').filter(Boolean).forEach(line => {
-        const parts = line.split(' from ');
-        if (parts.length === 2) {
-            const appIdentifier = parts[0].trim();
-            const containerName = parts[1].trim();
-            if (!exportedAppsByContainer.has(containerName)) {
-                exportedAppsByContainer.set(containerName, new Set());
-            }
-            exportedAppsByContainer.get(containerName).add(appIdentifier);
-        }
-    });
-
-    // 2. Get all containers and their statuses to determine which are running.
+    // 1. Get all containers and their statuses to determine which are running.
     const psOutput = await runCommand('podman', ['ps', '-a', '--filter', 'label=manager=distrobox', '--format', '{{.Names}}\t{{.Status}}']).catch(() => '');
     const allContainers = psOutput.split('\n').filter(Boolean).map(line => {
         const [name, status] = line.split('\t');
@@ -698,6 +680,23 @@ ipcMain.handle('list-applications', async () => {
     if (runningContainers.length === 0) {
         return { applications: [], unscannedContainers };
     }
+
+    // 2. Iterate through running containers to find which apps are exported. This is more
+    // compatible with older distrobox versions, as per user feedback.
+    const exportedAppsByContainer = new Map();
+    const exportedAppPromises = runningContainers.map(async ({ name: containerName }) => {
+        try {
+            const listAppsArgs = ['enter', containerName, '--', 'distrobox-export', '--list-apps'];
+            const output = await runCommand('distrobox', listAppsArgs);
+            const appIdentifiers = new Set(output.split('\n').filter(Boolean).map(line => line.trim()));
+            exportedAppsByContainer.set(containerName, appIdentifiers);
+        } catch (err) {
+            console.warn(`Could not list exported apps for '${containerName}' (may be normal if none are exported). Error: ${err.message}`);
+            // Ensure the map entry exists even on failure, so we don't get undefined later.
+            exportedAppsByContainer.set(containerName, new Set());
+        }
+    });
+    await Promise.all(exportedAppPromises);
 
     // 3. Map over ONLY running containers to find all apps in parallel
     const allAppsPromises = runningContainers.map(async ({ name: containerName }) => {
