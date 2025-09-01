@@ -14,22 +14,38 @@ const execOptions = {
   }
 };
 
+/**
+ * Parses the standard output of 'distrobox list'.
+ * It uses header positions to determine column boundaries, making it robust
+ * against spaces within fields like 'STATUS' or 'CREATED'.
+ * @param {string} output The raw string output from the command.
+ * @returns {Array<{name: string, status: string, image: string}>}
+ */
 function parseDistroboxList(output) {
   const lines = output.trim().split('\n');
   if (lines.length < 2) return [];
-  const headers = lines[0].split('|').map(h => h.trim().toLowerCase());
-  const nameIndex = headers.indexOf('name');
-  const statusIndex = headers.indexOf('status');
-  const imageIndex = headers.indexOf('image');
-  if (nameIndex === -1 || statusIndex === -1 || imageIndex === -1) {
-    console.error("Could not find required headers in distrobox list output");
+
+  const header = lines[0];
+  const namePos = header.indexOf('NAME');
+  const statusPos = header.indexOf('STATUS');
+  const createdPos = header.indexOf('CREATED');
+  const imagePos = header.indexOf('IMAGE');
+
+  if ([namePos, statusPos, createdPos, imagePos].some(pos => pos === -1)) {
+    console.error("Could not parse 'distrobox list' headers. Unexpected format.");
     return [];
   }
+
   return lines.slice(1).map(line => {
-    const parts = line.split('|').map(p => p.trim());
-    return { name: parts[nameIndex], status: parts[statusIndex], image: parts[imageIndex] };
-  });
+    const name = line.substring(namePos, statusPos).trim();
+    const status = line.substring(statusPos, createdPos).trim();
+    const image = line.substring(imagePos).trim();
+
+    if (!name || !status || !image) return null;
+    return { name, status, image };
+  }).filter(Boolean); // Removes any null entries from failed parsing
 }
+
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -161,7 +177,7 @@ function runCommand(command, args = []) {
     const shell = '/bin/bash';
     const shellArgs = ['-l', '-c', fullCommandString];
     
-    console.log(`[DEBUG] Spawning: ${shell} ${shellArgs.join(' ')}`);
+    console.log(`[INFO] Spawning: ${shell} ${shellArgs.join(' ')}`);
 
     const child = spawn(shell, shellArgs, { env: execOptions.env, shell: false });
 
@@ -169,20 +185,15 @@ function runCommand(command, args = []) {
     let stderr = '';
 
     child.stdout.on('data', (data) => {
-      const log = data.toString();
-      console.log(`[DEBUG] stdout chunk: ${log.trim()}`);
-      stdout += log;
+      stdout += data.toString();
     });
 
     child.stderr.on('data', (data) => {
-      const log = data.toString();
-      // Log stderr as error for better visibility in logs
-      console.error(`[DEBUG] stderr chunk: ${log.trim()}`);
-      stderr += log;
+      stderr += data.toString();
     });
 
     child.on('close', (code) => {
-      console.log(`[DEBUG] Command "${fullCommandString}" finished with code ${code}`);
+      console.log(`[INFO] Command "${fullCommandString}" finished with code ${code}`);
       if (code !== 0) {
         console.error(`[ERROR] Command "${fullCommandString}" failed. Stderr:\n${stderr}`);
         reject(new Error(stderr.trim() || `Process exited with code ${code}`));
@@ -200,7 +211,7 @@ function runCommand(command, args = []) {
 
 ipcMain.handle('list-containers', async () => {
   try {
-    const output = await runCommand('distrobox', ['list', '--no-color', '--verbose']);
+    const output = await runCommand('distrobox', ['list', '--no-color']);
     return parseDistroboxList(output);
   } catch (err) {
     if (err.message && err.message.includes("command not found")) {
@@ -228,7 +239,8 @@ ipcMain.handle('container-stop', async (event, name) => {
     throw new Error('Invalid container name provided.');
   }
   try {
-    return await runCommand('distrobox', ['stop', sanitizedName]);
+    // Add '--yes' to bypass the interactive confirmation prompt
+    return await runCommand('distrobox', ['stop', '--yes', sanitizedName]);
   } catch(err) {
     throw new Error(`Failed to stop container "${sanitizedName}": ${err.message}`);
   }
