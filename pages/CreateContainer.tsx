@@ -3,6 +3,7 @@ import type { Page, LocalImage, CreateContainerOptions } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactDOM from 'react-dom';
 import ToggleSwitch from '../components/ToggleSwitch';
+import DistroLogo from '../components/DistroLogo';
 
 // --- Helper Components & Icons ---
 
@@ -281,12 +282,15 @@ const CreateContainer: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ s
                             key={img.id}
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             onClick={() => setSelectedImage(img)}
-                            className={`p-4 text-left rounded-lg border-2 transition-all duration-200 w-full
+                            className={`p-4 text-left rounded-lg border-2 transition-all duration-200 w-full flex items-center gap-3
                                 ${selectedImage?.id === img.id ? 'bg-accent/20 border-accent' : 'bg-primary-light border-primary hover:border-gray-600'}
                             `}
                         >
-                            <p className="font-bold text-gray-100 break-all">{img.repository}:{img.tag}</p>
-                            <p className="text-xs text-gray-400 mt-1">Size: {img.size} &bull; Created: {img.created}</p>
+                            <DistroLogo imageName={img.repository} className="text-4xl" />
+                            <div className="min-w-0">
+                                <p className="font-bold text-gray-100 break-all">{img.repository}:{img.tag}</p>
+                                <p className="text-xs text-gray-400 mt-1">Size: {img.size} &bull; Created: {img.created}</p>
+                            </div>
                         </motion.button>
                     ))}
                     </AnimatePresence>

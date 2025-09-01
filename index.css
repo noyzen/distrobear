@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'DistroLogos';
+  src: url('/dostro-logos.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
 /* Required for transparent window with rounded corners */
 body {
   background: transparent;

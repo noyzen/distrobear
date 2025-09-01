@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import DistroLogo from '../components/DistroLogo';
 
 // --- Helper Components & Icons ---
 
@@ -87,22 +88,6 @@ const PullModal: React.FC<{
   );
 };
 
-// --- SVG Logos (Simplified) ---
-const AlmaLinuxLogo = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24"><path fill="#00AEEF" d="M12 2L2 7l10 5 10-5-10-5z"/><path fill="#00AEEF" d="M2 17l10 5 10-5-10-5-10 5z"/><path fill="#00AEEF" d="M2 12l10 5 10-5-10-5-10 5z"/></svg>;
-const AlpineLogo = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24"><path fill="#0D5983" d="M12 2L2 22h20L12 2zm0 4.5L18.5 20H5.5L12 6.5z"/></svg>;
-const AmazonLinuxLogo = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24"><path fill="#FF9900" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-2h2v2h-2zm0-4V7h2v6h-2z"/></svg>;
-const ArchLinuxLogo = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24"><path fill="#1793D1" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-4-4h8l-4 4z"/></svg>;
-const CentOSLogo = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24"><path fill="#214097" d="M12 2L2 7l10 5 10-5-10-5z"/><path fill="#E12179" d="M2 17l10 5 10-5-10-5-10 5z"/><path fill="#7BC143" d="M2 12l10 5 10-5-10-5-10 5z"/></svg>;
-const DebianLogo = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24"><path fill="#A80030" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>;
-const FedoraLogo = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24"><path fill="#294172" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-2h2v2h-2zm0-4V7h2v6h-2z"/></svg>;
-const OpenSuseLogo = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24"><path fill="#73BA25" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15l-5-5h10l-5 5z"/></svg>;
-const RedhatLogo = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24"><path fill="#EE0000" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-2h2v2h-2zm0-4V7h2v6h-2z"/></svg>;
-const RockyLinuxLogo = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24"><path fill="#10B981" d="M12 2L2 7l10 5 10-5-10-5z"/><path fill="#10B981" d="M2 17l10 5 10-5-10-5-10 5z"/><path fill="#10B981" d="M2 12l10 5 10-5-10-5-10 5z"/></svg>;
-const UbuntuLogo = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24"><circle fill="#E95420" cx="12" cy="12" r="10"/><circle fill="#FFFFFF" cx="12" cy="7" r="2"/><circle fill="#FFFFFF" cx="18" cy="15" r="2"/><circle fill="#FFFFFF" cx="6" cy="15" r="2"/></svg>;
-const WolfiLogo = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24"><path fill="#4F46E5" d="M12 2l-10 20h20L12 2zm0 5l6 12H6l6-12z"/></svg>;
-const UblueLogo = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24"><path fill="#3B82F6" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-2h2v2h-2zm0-4V7h2v6h-2z"/></svg>;
-const GenericLogo = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} viewBox="0 0 24 24"><path fill="currentColor" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" /></svg>;
-
 const CheckCircleIcon = ({ className = "w-6 h-6" }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const ExclamationCircleIcon = ({ className = "w-6 h-6" }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 
@@ -111,7 +96,6 @@ const ExclamationCircleIcon = ({ className = "w-6 h-6" }) => <svg xmlns="http://
 interface ImageInfo {
   name: string;
   address: string;
-  logo: React.FC<React.SVGProps<SVGSVGElement>>;
 }
 
 interface ImageCategory {
@@ -121,52 +105,52 @@ interface ImageCategory {
 
 const imageList: ImageCategory[] = [
   { category: "Fedora", images: [
-    { name: "Fedora 42", address: "quay.io/fedora/fedora-toolbox:42", logo: FedoraLogo },
-    { name: "Fedora 41", address: "quay.io/fedora/fedora-toolbox:41", logo: FedoraLogo },
-    { name: "Fedora 40", address: "registry.fedoraproject.org/fedora-toolbox:40", logo: FedoraLogo },
-    { name: "Fedora 39", address: "registry.fedoraproject.org/fedora-toolbox:39", logo: FedoraLogo },
+    { name: "Fedora 42", address: "quay.io/fedora/fedora-toolbox:42" },
+    { name: "Fedora 41", address: "quay.io/fedora/fedora-toolbox:41" },
+    { name: "Fedora 40", address: "registry.fedoraproject.org/fedora-toolbox:40" },
+    { name: "Fedora 39", address: "registry.fedoraproject.org/fedora-toolbox:39" },
   ]},
   { category: "Ubuntu", images: [
-    { name: "Ubuntu 25.04", address: "quay.io/toolbx/ubuntu-toolbox:25.04", logo: UbuntuLogo },
-    { name: "Ubuntu 24.04", address: "quay.io/toolbx/ubuntu-toolbox:24.04", logo: UbuntuLogo },
-    { name: "Ubuntu 22.04", address: "quay.io/toolbx/ubuntu-toolbox:22.04", logo: UbuntuLogo },
-    { name: "Ubuntu 20.04", address: "quay.io/toolbx/ubuntu-toolbox:20.04", logo: UbuntuLogo },
+    { name: "Ubuntu 25.04", address: "quay.io/toolbx/ubuntu-toolbox:25.04" },
+    { name: "Ubuntu 24.04", address: "quay.io/toolbx/ubuntu-toolbox:24.04" },
+    { name: "Ubuntu 22.04", address: "quay.io/toolbx/ubuntu-toolbox:22.04" },
+    { name: "Ubuntu 20.04", address: "quay.io/toolbx/ubuntu-toolbox:20.04" },
   ]},
   { category: "Debian", images: [
-    { name: "Debian 13 (Trixie)", address: "quay.io/toolbx-images/debian-toolbox:13", logo: DebianLogo },
-    { name: "Debian 12 (Bookworm)", address: "quay.io/toolbx-images/debian-toolbox:12", logo: DebianLogo },
-    { name: "Debian 11 (Bullseye)", address: "quay.io/toolbx-images/debian-toolbox:11", logo: DebianLogo },
+    { name: "Debian 13 (Trixie)", address: "quay.io/toolbx-images/debian-toolbox:13" },
+    { name: "Debian 12 (Bookworm)", address: "quay.io/toolbx-images/debian-toolbox:12" },
+    { name: "Debian 11 (Bullseye)", address: "quay.io/toolbx-images/debian-toolbox:11" },
   ]},
   { category: "Arch Linux", images: [
-    { name: "Arch Linux", address: "quay.io/toolbx/arch-toolbox:latest", logo: ArchLinuxLogo },
-    { name: "Bazzite (Arch)", address: "ghcr.io/ublue-os/bazzite-arch:latest", logo: ArchLinuxLogo },
+    { name: "Arch Linux", address: "quay.io/toolbx/arch-toolbox:latest" },
+    { name: "Bazzite (Arch)", address: "ghcr.io/ublue-os/bazzite-arch:latest" },
   ]},
   { category: "Enterprise Linux", images: [
-    { name: "AlmaLinux 9", address: "quay.io/toolbx-images/almalinux-toolbox:9", logo: AlmaLinuxLogo },
-    { name: "AlmaLinux 8", address: "quay.io/toolbx-images/almalinux-toolbox:8", logo: AlmaLinuxLogo },
-    { name: "Rocky Linux 9", address: "quay.io/toolbx-images/rockylinux-toolbox:9", logo: RockyLinuxLogo },
-    { name: "Rocky Linux 8", address: "quay.io/toolbx-images/rockylinux-toolbox:8", logo: RockyLinuxLogo },
-    { name: "CentOS Stream 9", address: "quay.io/toolbx-images/centos-toolbox:stream9", logo: CentOSLogo },
-    { name: "CentOS Stream 8", address: "quay.io/toolbx-images/centos-toolbox:stream8", logo: CentOSLogo },
+    { name: "AlmaLinux 9", address: "quay.io/toolbx-images/almalinux-toolbox:9" },
+    { name: "AlmaLinux 8", address: "quay.io/toolbx-images/almalinux-toolbox:8" },
+    { name: "Rocky Linux 9", address: "quay.io/toolbx-images/rockylinux-toolbox:9" },
+    { name: "Rocky Linux 8", address: "quay.io/toolbx-images/rockylinux-toolbox:8" },
+    { name: "CentOS Stream 9", address: "quay.io/toolbx-images/centos-toolbox:stream9" },
+    { name: "CentOS Stream 8", address: "quay.io/toolbx-images/centos-toolbox:stream8" },
   ]},
   { category: "Red Hat", images: [
-    { name: "Red Hat UBI 9", address: "registry.access.redhat.com/ubi9/toolbox", logo: RedhatLogo },
-    { name: "Red Hat UBI 8", address: "registry.access.redhat.com/ubi8/toolbox", logo: RedhatLogo },
+    { name: "Red Hat UBI 9", address: "registry.access.redhat.com/ubi9/toolbox" },
+    { name: "Red Hat UBI 8", address: "registry.access.redhat.com/ubi8/toolbox" },
   ]},
   { category: "Other Distributions", images: [
-    { name: "openSUSE", address: "registry.opensuse.org/opensuse/distrobox:latest", logo: OpenSuseLogo },
-    { name: "Alpine 3.22", address: "quay.io/toolbx-images/alpine-toolbox:3.22", logo: AlpineLogo },
-    { name: "Alpine 3.21", address: "quay.io/toolbx-images/alpine-toolbox:3.21", logo: AlpineLogo },
-    { name: "Wolfi", address: "quay.io/toolbx-images/wolfi-toolbox:latest", logo: WolfiLogo },
-    { name: "Amazon Linux 2023", address: "quay.io/toolbx-images/amazonlinux-toolbox:2023", logo: AmazonLinuxLogo },
-    { name: "Amazon Linux 2", address: "quay.io/toolbx-images/amazonlinux-toolbox:2", logo: AmazonLinuxLogo },
+    { name: "openSUSE", address: "registry.opensuse.org/opensuse/distrobox:latest" },
+    { name: "Alpine 3.22", address: "quay.io/toolbx-images/alpine-toolbox:3.22" },
+    { name: "Alpine 3.21", address: "quay.io/toolbx-images/alpine-toolbox:3.21" },
+    { name: "Wolfi", address: "quay.io/toolbx-images/wolfi-toolbox:latest" },
+    { name: "Amazon Linux 2023", address: "quay.io/toolbx-images/amazonlinux-toolbox:2023" },
+    { name: "Amazon Linux 2", address: "quay.io/toolbx-images/amazonlinux-toolbox:2" },
   ]},
   { category: "Ublue Variants", images: [
-    { name: "Bluefin CLI", address: "ghcr.io/ublue-os/bluefin-cli:latest", logo: UblueLogo },
-    { name: "Ublue Ubuntu", address: "ghcr.io/ublue-os/ubuntu-toolbox:latest", logo: UblueLogo },
-    { name: "Ublue Fedora", address: "ghcr.io/ublue-os/fedora-toolbox:latest", logo: UblueLogo },
-    { name: "Ublue Wolfi", address: "ghcr.io/ublue-os/wolfi-toolbox:latest", logo: UblueLogo },
-    { name: "Ublue Arch", address: "ghcr.io/ublue-os/archlinux-distrobox:latest", logo: UblueLogo },
+    { name: "Bluefin CLI", address: "ghcr.io/ublue-os/bluefin-cli:latest" },
+    { name: "Ublue Ubuntu", address: "ghcr.io/ublue-os/ubuntu-toolbox:latest" },
+    { name: "Ublue Fedora", address: "ghcr.io/ublue-os/fedora-toolbox:latest" },
+    { name: "Ublue Wolfi", address: "ghcr.io/ublue-os/wolfi-toolbox:latest" },
+    { name: "Ublue Arch", address: "ghcr.io/ublue-os/archlinux-distrobox:latest" },
   ]},
 ];
 
@@ -294,7 +278,7 @@ const DownloadImages: React.FC = () => {
                     ${selectedImageAddress === image.address ? 'bg-accent/20 border-accent' : 'bg-primary border-primary-light hover:border-gray-600'}
                   `}
                 >
-                  <image.logo className={`w-10 h-10 mr-4 flex-shrink-0 ${image.logo === GenericLogo ? 'text-gray-400' : ''}`} />
+                  <DistroLogo imageName={image.address} className="text-4xl w-10 h-10 mr-4 flex-shrink-0 flex items-center justify-center" />
                   <div className="min-w-0">
                     <p className="font-bold text-gray-100">{image.name}</p>
                     <p className="text-xs text-gray-400 mt-1 truncate" title={image.address}>{image.address}</p>

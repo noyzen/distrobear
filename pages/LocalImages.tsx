@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { LocalImage } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
+import DistroLogo from '../components/DistroLogo';
 
 // --- Local Components for LocalImages Page ---
 
@@ -106,9 +107,12 @@ const ImageRow: React.FC<{
         exit={{ opacity: 0 }}
         className="grid grid-cols-12 items-center p-4 border-b border-primary-light transition-colors duration-200 hover:bg-primary-light/50 gap-4"
       >
-        <div className="col-span-12 md:col-span-5 min-w-0">
-          <p className="font-bold text-gray-100 truncate" title={imageIdentifier}>{image.repository}:{image.tag}</p>
-          <p className="text-xs text-gray-400 mt-1 truncate" title={image.id}>ID: {image.id.substring(0, 12)}</p>
+        <div className="col-span-12 md:col-span-5 min-w-0 flex items-center gap-3">
+          <DistroLogo imageName={image.repository} className="text-4xl" />
+          <div className="min-w-0">
+            <p className="font-bold text-gray-100 truncate" title={imageIdentifier}>{image.repository}:{image.tag}</p>
+            <p className="text-xs text-gray-400 mt-1 truncate" title={image.id}>ID: {image.id.substring(0, 12)}</p>
+          </div>
         </div>
         <div className="col-span-4 md:col-span-2 text-sm text-gray-300">{image.size}</div>
         <div className="col-span-8 md:col-span-2 text-sm text-gray-400">{image.created}</div>
