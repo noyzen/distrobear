@@ -559,8 +559,11 @@ ipcMain.handle('container-commit', async (event, name, imageName, imageTag) => {
     throw new Error('Invalid image tag provided.');
   }
   
+  const fullImageName = `${sanitizedImageName}:${sanitizedImageTag}`;
+
   try {
-    return await runCommand('distrobox', ['commit', sanitizedName, '--name', sanitizedImageName, '--tag', sanitizedImageTag]);
+    // Corrected to use positional arguments for 'distrobox commit'
+    return await runCommand('distrobox', ['commit', sanitizedName, fullImageName]);
   } catch(err) {
     throw new Error(`Failed to commit container "${sanitizedName}": ${err.message}`);
   }
