@@ -163,14 +163,11 @@ ipcMain.handle('container-start', async (event, name) => {
 });
 
 ipcMain.handle('container-stop', async (event, name) => {
-  const command = `distrobox stop ${name}`;
-  const options = { name: `DistroBear Action` };
-
   return new Promise((resolve, reject) => {
-    sudo.exec(command, options, (error, stdout, stderr) => {
+    exec(`distrobox stop ${name}`, (error, stdout, stderr) => {
       if (error) {
-        console.error(`Failed to stop container ${name} with sudo: ${error}`);
-        return reject(new Error(stderr || error.message));
+        console.error(`Failed to stop container ${name}: ${stderr}`);
+        return reject(new Error(stderr));
       }
       resolve(stdout);
     });
