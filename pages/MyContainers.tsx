@@ -112,7 +112,6 @@ const ContainerInfoModal: React.FC<{
                             <dd><BooleanPill value={info.nvidia} /></dd>
                         </div>
                     </div>
-                    {info.additional_flags && <DetailItem label="Additional Flags" value={info.additional_flags} isCode fullWidth/>}
                 </div>
 
                 <div>
@@ -347,6 +346,28 @@ const LightningBoltIcon: React.FC<{ className?: string; title?: string; }> = ({ 
     </svg>
 );
 
+const ShieldIcon: React.FC<{ className?: string; title?: string; }> = ({ className, title }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className}>
+    {title && <title>{title}</title>}
+    <path fillRule="evenodd" d="M10 1.5c.386 0 .762.043 1.128.123 1.48-.022 2.923.433 4.093 1.417.21.173.41.358.598.554A1 1 0 0117 4.82v4.434c0 1.4-.413 2.76-1.18 3.963-.923 1.45-2.3 2.53-3.955 3.162-.255.099-.516.186-.78.258a1 1 0 01-.17 0c-.264-.072-.525-.159-.78-.258-1.656-.632-3.032-1.712-3.955-3.162C4.413 11.983 4 10.654 4 9.254V4.82a1 1 0 011.18-1.222c.188-.196.388-.381.598-.554C6.95 1.956 8.392 1.5 9.872 1.523A4.89 4.89 0 0110 1.5zm.354 4.354a.5.5 0 00-.708 0L7.5 8.004l-.854-.854a.5.5 0 10-.708.708L7.146 8.36l-.853.854a.5.5 0 00.708.708L7.5 8.707l.854.853a.5.5 0 00.708-.708L8.207 8.36l.853-.853a.5.5 0 000-.707l-.353-.353z" clipRule="evenodd" />
+    <path d="M10 2.5a7.5 7.5 0 100 15 7.5 7.5 0 000-15zM8.354 5.854a.5.5 0 000 .708L9.646 8l-1.292 1.293a.5.5 0 00.708.708L10 8.707l1.293 1.293a.5.5 0 00.708-.708L10.707 8l1.293-1.293a.5.5 0 00-.708-.708L10 7.293 8.646 5.854a.5.5 0 00-.293-.147z" />
+     <path d="M10 1a9 9 0 100 18 9 9 0 000-18zM5.47 5.47a.75.75 0 011.06 0L10 8.94l3.47-3.47a.75.75 0 111.06 1.06L11.06 10l3.47 3.47a.75.75 0 11-1.06 1.06L10 11.06l-3.47 3.47a.75.75 0 01-1.06-1.06L8.94 10 5.47 6.53a.75.75 0 010-1.06z" />
+     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+     <path fillRule="evenodd" d="M10 1a9 9 0 100 18 9 9 0 000-18zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+    <path fillRule="evenodd" d="M10,1.5a8.5,8.5,0,1,0,8.5,8.5A8.5,8.5,0,0,0,10,1.5Zm0,15.16A6.66,6.66,0,1,1,16.66,10,6.67,6.67,0,0,1,10,16.66Z" />
+    <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm0 18a8.5 8.5 0 1 1 8.5-8.5A8.51 8.51 0 0 1 10 18.5Z"/>
+    <path fillRule="evenodd" d="M10 1.5A8.5 8.5 0 1018.5 10 8.5 8.5 0 0010 1.5zM5.03 5.03a.75.75 0 011.06 0L10 8.94l3.91-3.91a.75.75 0 111.06 1.06L11.06 10l3.91 3.91a.75.75 0 11-1.06 1.06L10 11.06l-3.91 3.91a.75.75 0 01-1.06-1.06L8.94 10 5.03 6.09a.75.75 0 010-1.06z" clipRule="evenodd" />
+    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4 10a6 6 0 1112 0 6 6 0 01-12 0z" clipRule="evenodd" />
+    <path fillRule="evenodd" d="M10 1.5c-4.69 0-8.5 3.81-8.5 8.5s3.81 8.5 8.5 8.5 8.5-3.81 8.5-8.5-3.81-8.5-8.5-8.5zM12 10a2 2 0 11-4 0 2 2 0 014 0z" clipRule="evenodd" />
+    <path d="M10,1.5A8.5,8.5,0,1,0,18.5,10,8.5,8.5,0,0,0,10,1.5Zm0,15A6.5,6.5,0,1,1,16.5,10,6.5,6.5,0,0,1,10,16.5Z"/><path d="M10,5a5,5,0,1,0,5,5,5,5,0,0,0-5-5Zm0,8a3,3,0,1,1,3-3,3,3,0,0,1-3,3Z"/>
+    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.707-10.293a1 1 0 00-1.414 0L6 11.006V10a1 1 0 10-2 0v2a1 1 0 001 1h2a1 1 0 100-2H8.414l3.293-3.293a1 1 0 000-1.414z" clipRule="evenodd" />
+    <path d="M10,1.5c-4.694,0-8.5,3.806-8.5,8.5s3.806,8.5,8.5,8.5,8.5-3.806,8.5-8.5S14.694,1.5,10,1.5Zm0,15c-3.584,0-6.5-2.916-6.5-6.5S6.416,3.5,10,3.5,16.5,6.416,16.5,10,13.584,16.5,10,16.5Z"/><path d="M10,5.5a4.5,4.5,0,1,0,4.5,4.5A4.5,4.5,0,0,0,10,5.5Zm0,7A2.5,2.5,0,1,1,12.5,10,2.5,2.5,0,0,1,10,12.5Z"/>
+     <path fillRule="evenodd" d="M10 1a9 9 0 100 18 9 9 0 000-18zM9 5a1 1 0 112 0v2.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414L9 7.586V5zm1 7a1 1 0 100 2h.01a1 1 0 100-2H10z" clipRule="evenodd" />
+     <path fillRule="evenodd" d="M10 1.5c.386 0 .762.043 1.128.123 1.48-.022 2.923.433 4.093 1.417.21.173.41.358.598.554A1 1 0 0117 4.82v4.434c0 1.4-.413 2.76-1.18 3.963-.923 1.45-2.3 2.53-3.955 3.162-.255.099-.516.186-.78.258a1 1 0 01-.17 0c-.264-.072-.525-.159-.78-.258-1.656-.632-3.032-1.712-3.955-3.162C4.413 11.983 4 10.654 4 9.254V4.82a1 1 0 011.18-1.222c.188-.196.388-.381.598-.554C6.95 1.956 8.392 1.5 9.872 1.523A4.89 4.89 0 0110 1.5z" clipRule="evenodd" />
+  </svg>
+);
+
+
 const TerminalIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
@@ -502,6 +523,7 @@ const ContainerRow: React.FC<{
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-bold text-gray-100 truncate">{container.name}</h3>
+            {container.isIsolated && <ShieldIcon className="w-4 h-4 text-cyan-400 flex-shrink-0" title="Isolated Home Directory" />}
             {optimisticAutostartEnabled && <LightningBoltIcon className="w-4 h-4 text-yellow-400 flex-shrink-0" title="Autostart Enabled" />}
           </div>
           <p className="text-xs text-gray-400 mt-1 truncate" title={container.image}>{container.image}</p>

@@ -12,6 +12,7 @@ export interface Container {
   status: string;
   image: string;
   isAutostartEnabled: boolean;
+  isIsolated: boolean;
 }
 
 export interface ContainerInfo {
@@ -27,7 +28,7 @@ export interface ContainerInfo {
   size: string; // e.g. "1.23GB (virtual 4.56GB)"
   volumes: string[]; // Formatted as "host_path -> container_path"
   
-  // From distrobox info
+  // From distrobox info / inferred
   home_dir: string;
   hostname: string;
   user_name: string;
@@ -37,7 +38,6 @@ export interface ContainerInfo {
   init: boolean;
   nvidia: boolean;
   root: boolean;
-  additional_flags: string | null;
 }
 
 

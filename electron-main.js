@@ -381,8 +381,7 @@ ipcMain.handle('list-containers', async () => {
   try {
     const usePodman = await commandExists('podman');
     const useDocker = await commandExists('docker');
-
-    let command, args;
+    let command;
 
     if (usePodman) {
       command = 'podman';
@@ -392,21 +391,38 @@ ipcMain.handle('list-containers', async () => {
       throw new Error('No container runtime (Podman or Docker) found.');
     }
 
-    // Use a structured format to avoid parsing issues. This is far more reliable.
-    // The tab separator is unlikely to appear in names, images, or statuses.
-    args = ['ps', '-a', '--filter', 'label=manager=distrobox', '--format', '{{.Names}}\t{{.Image}}\t{{.Status}}'];
-
-    const output = await runCommand(command, args);
+    const psArgs = ['ps', '-a', '--filter', 'label=manager=distrobox', '--format', '{{.Names}}\t{{.Image}}\t{{.Status}}'];
+    const output = await runCommand(command, psArgs);
     if (!output) return [];
 
     const lines = output.trim().split('\n').filter(line => line.trim());
-    
+    const hostHome = os.homedir();
+
     return Promise.all(lines.map(async line => {
       const [name, image, status] = line.split('\t');
       const serviceName = `container-${name}.service`;
-      // Use the robust helper to check autostart status without logging errors for disabled services.
       const isAutostartEnabled = await isSystemdServiceEnabled(serviceName);
-      return { name, image, status, isAutostartEnabled };
+
+      // Inspect each container to check its home mount configuration.
+      // This is the most reliable way to determine if it's isolated.
+      let isIsolated = true; // Assume isolated unless proven otherwise.
+      try {
+        const inspectOutput = await runCommand(command, ['inspect', name]);
+        const inspectData = JSON.parse(inspectOutput)[0];
+        // A standard (non-isolated) distrobox will have a bind mount
+        // where the source is the host's home directory.
+        if (inspectData && inspectData.Mounts) {
+          const hasHostHomeMount = inspectData.Mounts.some(
+            mount => mount.Source === hostHome && mount.Type === 'bind'
+          );
+          isIsolated = !hasHostHomeMount;
+        }
+      } catch (inspectErr) {
+        console.error(`[WARN] Could not inspect container "${name}" to check for isolation: ${inspectErr.message}`);
+        // Keep isIsolated as true (or false) as a safe default if inspect fails.
+      }
+
+      return { name, image, status, isAutostartEnabled, isIsolated };
     }));
 
   } catch (err) {
@@ -594,57 +610,24 @@ ipcMain.handle('container-info', async (event, name) => {
       throw new Error('No container runtime (Podman or Docker) found.');
     }
 
-    // 1. Get detailed info from the container backend
+    // 1. Get detailed info from the container backend. This is the single source of truth.
     const inspectOutput = await runCommand(backendCmd, ['inspect', sanitizedName]);
     if (!inspectOutput) throw new Error(`Container "${sanitizedName}" not found by ${backendName}.`);
-    const inspectData = JSON.parse(inspectOutput)[0]; // inspect returns an array
+    const inspectData = JSON.parse(inspectOutput)[0];
 
     // 2. Get container size using its unique ID for accuracy
     const sizeOutput = await runCommand(backendCmd, ['ps', '-a', '--filter', `id=${inspectData.Id}`, '--format', '{{.Size}}']);
 
-    // 3. Get Distrobox-specific info to supplement backend data
-    const distroboxInfoOutput = await runCommand('distrobox', ['info', '--name', sanitizedName]);
-
-    // 4. Parse and combine all data
-    const parseDistroboxInfo = (text) => {
-        const info = {};
-        const lines = text.split('\n');
-        const keyMap = {
-          'Home dir': 'home_dir',
-          'User name': 'user_name',
-          'User shell': 'user_shell',
-          'Hostname': 'hostname',
-          'Nvidia': 'nvidia', // boolean
-          'Init': 'init_distrobox', // boolean, to not conflict with inspect
-          'Root': 'root', // boolean
-          'Additional Flags': 'additional_flags',
-        };
-        for (const line of lines) {
-            const parts = line.split(/:\s+/);
-            if (parts.length < 2) continue;
-            const key = parts[0].trim();
-            const valueStr = parts.slice(1).join(': ').trim();
-            if (keyMap[key]) {
-                const mappedKey = keyMap[key];
-                if (['nvidia', 'init_distrobox', 'root'].includes(mappedKey)) {
-                    info[mappedKey] = valueStr.toLowerCase() === 'true';
-                } else if (mappedKey === 'additional_flags' && (valueStr === '(null)' || valueStr === '')) {
-                    info[mappedKey] = null;
-                }
-                else {
-                    info[mappedKey] = valueStr;
-                }
-            }
-        }
-        return info;
-    };
+    // 3. Parse and combine all data from inspect and ps. No more `distrobox info`.
     
-    const distroboxData = parseDistroboxInfo(distroboxInfoOutput);
-
     // Format mounts from inspect data for better readability
     const formattedVolumes = (inspectData.Mounts || []).map(
         (mount) => `${mount.Source} -> ${mount.Destination} (${mount.Type}, ${mount.Mode || 'ro'})`
     );
+
+    // Determine home directory from mounts
+    const homeMount = inspectData.Mounts.find(m => m.Destination && m.Destination.startsWith('/home/'));
+    const home_dir = homeMount ? `${homeMount.Destination} (from ${homeMount.Type === 'bind' ? 'host' : 'volume'})` : 'N/A';
 
     const combinedInfo = {
         id: inspectData.Id.substring(0, 12),
@@ -657,18 +640,17 @@ ipcMain.handle('container-info', async (event, name) => {
         backend: backendName,
         size: sizeOutput.trim() || 'N/A',
 
-        home_dir: distroboxData.home_dir || 'N/A',
-        user_name: distroboxData.user_name || 'N/A',
-        user_shell: distroboxData.user_shell || 'N/A',
-        hostname: distroboxData.hostname || inspectData.Config.Hostname || 'N/A',
+        home_dir: home_dir,
+        user_name: inspectData.Config.User || 'N/A',
+        user_shell: 'N/A (cannot be determined reliably)',
+        hostname: inspectData.Config.Hostname || 'N/A',
         
-        // Prefer the more reliable value from 'inspect' if available
-        init: inspectData.HostConfig.Init || distroboxData.init_distrobox || false,
-        nvidia: distroboxData.nvidia || false,
-        root: distroboxData.root || (inspectData.Config.User === 'root') || false,
+        init: !!inspectData.HostConfig.Init,
+        // Check for NVIDIA devices or runtime.
+        nvidia: !!(inspectData.HostConfig.Runtime === 'nvidia' || (inspectData.HostConfig.Devices && inspectData.HostConfig.Devices.some(d => d.PathOnHost.includes('nvidia')))),
+        root: !inspectData.Config.User || inspectData.Config.User === 'root' || inspectData.Config.User === '0',
         
         volumes: formattedVolumes,
-        additional_flags: distroboxData.additional_flags || null,
     };
     
     return combinedInfo;
