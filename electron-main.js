@@ -15,10 +15,11 @@ const execOptions = {
 };
 
 /**
- * Parses the standard output of 'distrobox list'.
- * It uses header positions to determine column boundaries, making it robust
- * against spaces within fields like 'STATUS'. It now gracefully handles the
- * optional presence of the 'CREATED' column.
+ * A more robust parser for the 'distrobox list' command.
+ * It dynamically detects column positions from the header row, making it
+ * resilient to formatting changes, optional columns (like 'CREATED'), and
+ * long field values that might shift column alignment.
+ *
  * @param {string} output The raw string output from the command.
  * @returns {Array<{name: string, status: string, image: string}>}
  */
@@ -26,31 +27,51 @@ function parseDistroboxList(output) {
   const lines = output.trim().split('\n');
   if (lines.length < 2) return [];
 
-  const header = lines[0];
-  const namePos = header.indexOf('NAME');
-  const statusPos = header.indexOf('STATUS');
-  const createdPos = header.indexOf('CREATED'); // This might be -1
-  const imagePos = header.indexOf('IMAGE');
+  const headerLine = lines[0];
+  // Define all possible headers we might care about
+  const knownHeaders = ['NAME', 'STATUS', 'CREATED', 'IMAGE'];
+  
+  // Find the position of each known header that exists in the output
+  const headerPositions = knownHeaders
+    .map(h => ({ name: h, pos: headerLine.indexOf(h) }))
+    .filter(h => h.pos !== -1)
+    .sort((a, b) => a.pos - b.pos);
 
-  // Check for the essential headers
-  if (namePos === -1 || statusPos === -1 || imagePos === -1) {
+  const nameHeader = headerPositions.find(h => h.name === 'NAME');
+  const statusHeader = headerPositions.find(h => h.name === 'STATUS');
+  const imageHeader = headerPositions.find(h => h.name === 'IMAGE');
+
+  // Ensure the essential headers are present
+  if (!nameHeader || !statusHeader || !imageHeader) {
     console.error("Could not parse 'distrobox list' headers. Required headers NAME, STATUS, IMAGE not found.");
-    console.error("Received header:", header);
+    console.error("Received header:", headerLine);
     return [];
   }
   
-  // Determine the end of the STATUS column. It's either the start of CREATED or the start of IMAGE.
-  const statusEndPos = (createdPos !== -1 && createdPos > statusPos) ? createdPos : imagePos;
+  // Determine the end position for each column by looking at the start of the next one
+  for (let i = 0; i < headerPositions.length; i++) {
+    const nextHeader = headerPositions[i + 1];
+    headerPositions[i].endPos = nextHeader ? nextHeader.pos : undefined;
+  }
+
+  const getColumnValue = (line, headerName) => {
+    const header = headerPositions.find(h => h.name === headerName);
+    if (!header) return '';
+    // Substring from the column's start to its end. If it's the last column, endPos will be undefined, capturing the rest of the line.
+    return line.substring(header.pos, header.endPos).trim();
+  };
 
   return lines.slice(1).map(line => {
-    // Skip separator lines like '---|---|---' which some versions might output
+    // Skip separator lines like '---|---|---'
     if (line.trim().startsWith('-')) return null;
 
-    const name = line.substring(namePos, statusPos).trim();
-    const status = line.substring(statusPos, statusEndPos).trim();
-    const image = line.substring(imagePos).trim();
+    const name = getColumnValue(line, 'NAME');
+    const status = getColumnValue(line, 'STATUS');
+    const image = getColumnValue(line, 'IMAGE');
 
+    // Basic validation
     if (!name || !status || !image) return null;
+    
     return { name, status, image };
   }).filter(Boolean); // Removes any null entries from failed parsing
 }

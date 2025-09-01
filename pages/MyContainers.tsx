@@ -5,9 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 const StatusIndicator: React.FC<{ status: string }> = ({ status }) => {
   const isUp = status.toLowerCase().startsWith('up');
   return (
-    <div className="flex items-center">
-      <span className={`h-3 w-3 rounded-full mr-2 ${isUp ? 'bg-accent' : 'bg-gray-500'} ${isUp ? 'animate-pulse' : ''}`}></span>
-      <span className={`${isUp ? 'text-accent-light' : 'text-gray-400'}`}>{status}</span>
+    <div className="flex items-center overflow-hidden">
+      <span className={`flex-shrink-0 h-3 w-3 rounded-full mr-2 ${isUp ? 'bg-accent' : 'bg-gray-500'} ${isUp ? 'animate-pulse' : ''}`}></span>
+      <span title={status} className={`truncate ${isUp ? 'text-accent-light' : 'text-gray-400'}`}>{status}</span>
     </div>
   );
 };
