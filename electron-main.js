@@ -16,9 +16,9 @@ const execOptions = {
 
 /**
  * A more robust parser for the 'distrobox list' command.
- * It dynamically detects column positions from the header row, making it
- * resilient to formatting changes, optional columns (like 'CREATED'), and
- * long field values that might shift column alignment.
+ * It handles multi-line entries for a single container by grouping lines
+ * before parsing columns. This prevents data from wrapping and being
+ * incorrectly assigned to other fields.
  *
  * @param {string} output The raw string output from the command.
  * @returns {Array<{name: string, status: string, image: string}>}
@@ -28,10 +28,8 @@ function parseDistroboxList(output) {
   if (lines.length < 2) return [];
 
   const headerLine = lines[0];
-  // Define all possible headers we might care about
   const knownHeaders = ['NAME', 'STATUS', 'CREATED', 'IMAGE'];
   
-  // Find the position of each known header that exists in the output
   const headerPositions = knownHeaders
     .map(h => ({ name: h, pos: headerLine.indexOf(h) }))
     .filter(h => h.pos !== -1)
@@ -41,14 +39,12 @@ function parseDistroboxList(output) {
   const statusHeader = headerPositions.find(h => h.name === 'STATUS');
   const imageHeader = headerPositions.find(h => h.name === 'IMAGE');
 
-  // Ensure the essential headers are present
   if (!nameHeader || !statusHeader || !imageHeader) {
     console.error("Could not parse 'distrobox list' headers. Required headers NAME, STATUS, IMAGE not found.");
     console.error("Received header:", headerLine);
     return [];
   }
   
-  // Determine the end position for each column by looking at the start of the next one
   for (let i = 0; i < headerPositions.length; i++) {
     const nextHeader = headerPositions[i + 1];
     headerPositions[i].endPos = nextHeader ? nextHeader.pos : undefined;
@@ -57,23 +53,52 @@ function parseDistroboxList(output) {
   const getColumnValue = (line, headerName) => {
     const header = headerPositions.find(h => h.name === headerName);
     if (!header) return '';
-    // Substring from the column's start to its end. If it's the last column, endPos will be undefined, capturing the rest of the line.
     return line.substring(header.pos, header.endPos).trim();
   };
 
-  return lines.slice(1).map(line => {
-    // Skip separator lines like '---|---|---'
-    if (line.trim().startsWith('-')) return null;
+  const rawRecords = [];
+  let currentRecordLines = [];
 
-    const name = getColumnValue(line, 'NAME');
-    const status = getColumnValue(line, 'STATUS');
-    const image = getColumnValue(line, 'IMAGE');
+  // Group lines into records. A new record starts with a non-whitespace character,
+  // subsequent wrapped lines start with whitespace.
+  for (const line of lines.slice(1)) {
+    if (line.trim().startsWith('-')) continue; // Skip separator lines
 
-    // Basic validation
+    if (line.length > 0 && line[0].trim() !== '') {
+      if (currentRecordLines.length > 0) {
+        rawRecords.push(currentRecordLines);
+      }
+      currentRecordLines = [line];
+    } else {
+      if (currentRecordLines.length > 0) {
+        currentRecordLines.push(line);
+      }
+    }
+  }
+  if (currentRecordLines.length > 0) {
+    rawRecords.push(currentRecordLines);
+  }
+
+  // Parse each grouped record by joining the parts from each line
+  return rawRecords.map(recordLines => {
+    const nameParts = [];
+    const statusParts = [];
+    const imageParts = [];
+
+    for (const line of recordLines) {
+        nameParts.push(getColumnValue(line, 'NAME'));
+        statusParts.push(getColumnValue(line, 'STATUS'));
+        imageParts.push(getColumnValue(line, 'IMAGE'));
+    }
+
+    const name = nameParts.filter(Boolean).join(' ');
+    const status = statusParts.filter(Boolean).join(' ');
+    const image = imageParts.filter(Boolean).join(' ');
+    
     if (!name || !status || !image) return null;
     
     return { name, status, image };
-  }).filter(Boolean); // Removes any null entries from failed parsing
+  }).filter(Boolean);
 }
 
 
