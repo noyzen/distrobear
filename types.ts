@@ -106,6 +106,8 @@ export interface IElectronAPI {
   imageDelete: (imageIdentifier: string) => Promise<void>;
   imageExport: (imageIdentifier: string) => Promise<{ success: boolean; message: string }>;
   imageImport: () => Promise<{ success: boolean; message: string }>;
+  imagePull: (imageAddress: string) => Promise<void>;
+  onImagePullLog: (callback: (log: string) => void) => void;
   containerCreate: (options: CreateContainerOptions) => Promise<void>;
   onCreationLog: (callback: (log: string) => void) => void;
 }

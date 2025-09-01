@@ -760,6 +760,28 @@ ipcMain.handle('image-import', async () => {
   }
 });
 
+ipcMain.handle('image-pull', async (event, imageAddress) => {
+  const logToFrontend = (data) => mainWindow.webContents.send('image-pull-log', data.toString());
+  
+  // Sanitize the address to prevent command injection. Allows complex repo paths.
+  const sanitizedAddress = String(imageAddress).replace(/[`$();|&<>]/g, '');
+  if (!sanitizedAddress) {
+    throw new Error('Invalid image address provided.');
+  }
+
+  const runtime = await getContainerRuntime();
+  const args = ['pull', sanitizedAddress];
+  
+  try {
+    logToFrontend(`--- Starting pull for: ${sanitizedAddress} ---\n`);
+    await runCommandStreamed(runtime, args, logToFrontend);
+    logToFrontend(`\n--- Successfully pulled ${sanitizedAddress}! ---\n`);
+  } catch (err) {
+    logToFrontend(`\n--- ERROR: Failed to pull image: ${err.message} ---\n`);
+    throw err; // Propagate error to the frontend caller
+  }
+});
+
 
 ipcMain.handle('container-create', async (event, options) => {
   const logToFrontend = (data) => mainWindow.webContents.send('creation-log', data.toString());

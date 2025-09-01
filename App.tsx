@@ -7,6 +7,7 @@ import TitleBar from './components/TitleBar';
 import SetupWizard from './pages/SetupWizard';
 import CreateContainer from './pages/CreateContainer';
 import LocalImages from './pages/LocalImages';
+import DownloadImages from './pages/DownloadImages';
 import type { Page, DependencyCheckResult } from './types';
 
 type AppState = 'checking' | 'setup-required' | 'ready';
@@ -57,7 +58,7 @@ const App: React.FC = () => {
       case 'local-images':
         return <LocalImages />;
       case 'download-images':
-        return <div className="p-8 text-center"><h1 className="text-3xl font-bold">Coming Soon!</h1><p className="text-gray-400 mt-2">This page is under construction.</p></div>;
+        return <DownloadImages />;
       default:
         return <MyContainers setCurrentPage={setCurrentPage} />;
     }
