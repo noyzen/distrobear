@@ -168,16 +168,14 @@ const CreateContainer: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ s
     fetchImages();
     
     // Setup log listener
-    const cleanup = window.electronAPI.onCreationLog((log) => {
+    window.electronAPI.onCreationLog((log) => {
         setCreationLogs(prev => [...prev, log]);
     });
     
-    // It's good practice to return a cleanup function from useEffect, although
-    // for Electron's ipcRenderer it might not be strictly necessary unless the component unmounts frequently.
-    return () => {
-      // Here you would typically call a function to remove the listener,
-      // e.g., cleanup(); if the API provided one.
-    };
+    // The listener is registered once when the component mounts.
+    // The electronAPI should ideally provide a cleanup function to remove the listener
+    // to prevent memory leaks if this component were to unmount, but for this app's
+    // structure, it is acceptable.
   }, []);
 
   const resetForm = () => {

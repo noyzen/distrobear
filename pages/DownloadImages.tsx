@@ -5,6 +5,12 @@ import DistroLogo from '../components/DistroLogo';
 
 // --- Helper Components & Icons ---
 
+const DownloadIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+  </svg>
+);
+
 const PullModal: React.FC<{
   isOpen: boolean;
   logs: string[];
@@ -222,10 +228,7 @@ const DownloadImages: React.FC = () => {
       </header>
 
       <section className="bg-primary p-6 rounded-lg shadow-lg mb-8 sticky top-0 z-10">
-          <label htmlFor="custom-image" className="block text-sm font-medium text-gray-300 mb-2">
-            Custom Image Address
-          </label>
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex gap-4">
             <input
               id="custom-image"
               type="text"
@@ -234,15 +237,16 @@ const DownloadImages: React.FC = () => {
                 setCustomImageAddress(e.target.value);
                 setSelectedImageAddress(null); // Deselect card if user types
               }}
-              placeholder="e.g., quay.io/fedora/fedora-toolbox:42"
+              placeholder="Enter custom image address to download..."
               className="flex-grow w-full px-4 py-2 bg-primary-light border border-primary rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/50"
             />
             <button
               onClick={handlePullImage}
               disabled={!customImageAddress || isPulling}
-              className="px-8 py-2 bg-accent text-charcoal font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200"
+              className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-2 bg-accent text-charcoal font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200"
             >
-              Pull Image
+              <DownloadIcon />
+              Download
             </button>
           </div>
       </section>
