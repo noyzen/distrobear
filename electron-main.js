@@ -8,6 +8,7 @@ const Store = require('electron-store');
 
 const store = new Store();
 let mainWindow; // Reference to the main window
+let activePullProcess = null; // Reference to the active image pull process for cancellation
 
 // Define a common options object for exec calls that need the modified PATH
 const execOptions = {
@@ -190,9 +191,10 @@ ipcMain.handle('install-dependencies', async () => {
  * @param {string} command The command to execute (e.g., 'sh').
  * @param {string[]} [args=[]] An array of arguments for the command.
  * @param {(data: string) => void} onData A callback function to handle chunks of output data.
+ * @param {(process: import('child_process').ChildProcess) => void} [onProcess] An optional callback to get the spawned child process.
  * @returns {Promise<void>} A promise that resolves when the command completes successfully.
  */
-function runCommandStreamed(command, args = [], onData) {
+function runCommandStreamed(command, args = [], onData, onProcess) {
   return new Promise((resolve, reject) => {
     const commandString = [command, ...args.map(a => `'${a}'`)].join(' ');
 
@@ -201,12 +203,21 @@ function runCommandStreamed(command, args = [], onData) {
       '/bin/bash', '-l', '-c',   // Run command in a full login shell
       commandString
     ]);
+    
+    if (onProcess) {
+        onProcess(child);
+    }
 
     child.stdout.on('data', (data) => onData(data.toString()));
     child.stderr.on('data', (data) => onData(data.toString())); // Pipe stderr to the same handler
 
-    child.on('close', (code) => {
+    child.on('close', (code, signal) => {
       const commandToRunForLogging = `${command} ${args.map(a => `'${a}'`).join(' ')}`;
+      if (signal === 'SIGTERM') {
+        console.log(`[INFO] Streamed command "${commandToRunForLogging}" was canceled.`);
+        reject(new Error('Canceled'));
+        return;
+      }
       if (code !== 0) {
         console.error(`[ERROR] Streamed command "${commandToRunForLogging}" failed with code ${code}.`);
         reject(new Error(`Process exited with code ${code}`));
@@ -774,12 +785,27 @@ ipcMain.handle('image-pull', async (event, imageAddress) => {
   
   try {
     logToFrontend(`--- Starting pull for: ${sanitizedAddress} ---\n`);
-    await runCommandStreamed(runtime, args, logToFrontend);
+    await runCommandStreamed(runtime, args, logToFrontend, (process) => {
+        activePullProcess = process;
+    });
     logToFrontend(`\n--- Successfully pulled ${sanitizedAddress}! ---\n`);
   } catch (err) {
-    logToFrontend(`\n--- ERROR: Failed to pull image: ${err.message} ---\n`);
-    throw err; // Propagate error to the frontend caller
+    if (err.message !== 'Canceled') {
+        logToFrontend(`\n--- ERROR: Failed to pull image: ${err.message} ---\n`);
+        throw err; // Propagate error to the frontend caller
+    }
+  } finally {
+      activePullProcess = null;
   }
+});
+
+ipcMain.handle('image-pull-cancel', async () => {
+    if (activePullProcess) {
+        mainWindow.webContents.send('image-pull-log', '\n--- Canceling download... ---\n');
+        activePullProcess.kill('SIGTERM');
+        return { success: true };
+    }
+    return { success: false, message: 'No active pull process found.' };
 });
 
 

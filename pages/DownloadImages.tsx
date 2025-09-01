@@ -12,7 +12,8 @@ const PullModal: React.FC<{
   success: boolean;
   isPulling: boolean;
   onClose: () => void;
-}> = ({ isOpen, logs, error, success, isPulling, onClose }) => {
+  onCancel: () => void;
+}> = ({ isOpen, logs, error, success, isPulling, onClose, onCancel }) => {
   const logContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -70,9 +71,17 @@ const PullModal: React.FC<{
           )}
         </AnimatePresence>
 
-        <footer className="p-4 border-t border-primary flex justify-end gap-4 flex-shrink-0">
+        <footer className="p-4 border-t border-primary flex justify-end items-center gap-4 flex-shrink-0">
           {isPulling ? (
-            <p className="text-gray-400 text-sm animate-pulse">Download in progress...</p>
+            <>
+                <p className="text-gray-400 text-sm animate-pulse mr-auto">Download in progress...</p>
+                <button
+                    onClick={onCancel}
+                    className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition-colors"
+                >
+                    Cancel
+                </button>
+            </>
           ) : (
              <button
                 onClick={onClose}
@@ -195,6 +204,11 @@ const DownloadImages: React.FC = () => {
     }
   };
   
+  const handleCancelPull = async () => {
+      await window.electronAPI.imagePullCancel();
+      // The `isPulling` state will be updated in the `handlePullImage`'s finally block.
+  };
+  
   const filteredImageList = useMemo(() => {
     if (!searchQuery) return imageList;
     const lowerCaseQuery = searchQuery.toLowerCase();
@@ -296,6 +310,7 @@ const DownloadImages: React.FC = () => {
         success={pullSuccess}
         isPulling={isPulling}
         onClose={() => setIsModalOpen(false)}
+        onCancel={handleCancelPull}
       />
     </div>
   );
