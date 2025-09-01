@@ -686,7 +686,9 @@ ipcMain.handle('list-applications', async () => {
     const exportedAppsByContainer = new Map();
     const exportedAppPromises = runningContainers.map(async ({ name: containerName }) => {
         try {
-            const listAppsArgs = ['enter', containerName, '--', 'distrobox-export', '--list-apps'];
+            // FIX: Use `--list-exported` to get the list of currently shared applications.
+            // The `--list-apps` flag shows all *available* applications, not their current export status.
+            const listAppsArgs = ['enter', containerName, '--', 'distrobox-export', '--list-exported'];
             const output = await runCommand('distrobox', listAppsArgs);
             const appIdentifiers = new Set(output.split('\n').filter(Boolean).map(line => line.trim()));
             exportedAppsByContainer.set(containerName, appIdentifiers);
