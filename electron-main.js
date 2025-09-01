@@ -204,6 +204,113 @@ function runCommand(command, args = []) {
   });
 }
 
+async function detectTerminalEmulator() {
+    const checkOrder = [
+        'ptyxis', 'gnome-terminal', 'konsole', 'xfce4-terminal', 
+        'mate-terminal', 'io.elementary.terminal', 'lxterminal', 
+        'qterminal', 'terminator', 'tilix', 'kitty', 'alacritty'
+    ];
+
+    try {
+        // 1. GNOME gsettings (most reliable for GNOME)
+        const gsettingsOutput = await exec('gsettings get org.gnome.desktop.default-applications.terminal exec');
+        if (gsettingsOutput.stdout) {
+            const terminal = gsettingsOutput.stdout.toString().replace(/'/g, '').trim();
+            if (await commandExists(terminal)) return terminal;
+        }
+    } catch (e) { /* ignore and continue */ }
+
+    try {
+        // 2. Debian/Ubuntu alternatives
+        const alternativesOutput = await exec('update-alternatives --query x-terminal-emulator');
+        if (alternativesOutput.stdout) {
+            const match = alternativesOutput.stdout.toString().match(/Value: (.+)/);
+            if (match && match[1]) {
+                const terminal = path.basename(match[1].trim());
+                 if (await commandExists(terminal)) return terminal;
+            }
+        }
+    } catch (e) { /* ignore */ }
+
+    // 3. Check for common terminals by existence
+    for (const terminal of checkOrder) {
+        if (await commandExists(terminal)) {
+            return terminal;
+        }
+    }
+
+    // 4. Infer from Desktop Environment Variable
+    const desktop = process.env.XDG_CURRENT_DESKTOP;
+    if (desktop) {
+        if (desktop.includes('GNOME') && await commandExists('gnome-terminal')) return 'gnome-terminal';
+        if (desktop.includes('KDE') && await commandExists('konsole')) return 'konsole';
+        if (desktop.includes('XFCE') && await commandExists('xfce4-terminal')) return 'xfce4-terminal';
+    }
+
+    return null; // No terminal found
+}
+
+ipcMain.handle('get-terminal', detectTerminalEmulator);
+
+ipcMain.handle('container-enter', async (event, name) => {
+  const sanitizedName = String(name).replace(/[^a-zA-Z0-9-_\.]/g, '');
+  if (!sanitizedName) {
+    throw new Error('Invalid container name provided.');
+  }
+
+  const terminal = await detectTerminalEmulator();
+  if (!terminal) {
+    throw new Error('Could not find a supported terminal emulator on your system.');
+  }
+  
+  const commandToRun = `distrobox enter ${sanitizedName}`;
+
+  let term, args;
+  switch (terminal) {
+    case 'ptyxis':
+      term = 'ptyxis';
+      args = ['--new-window', '--', 'bash', '-l', '-c', commandToRun];
+      break;
+    case 'gnome-terminal':
+      term = 'gnome-terminal';
+      args = ['--window', '--', 'bash', '-l', '-c', commandToRun];
+      break;
+    case 'konsole':
+      term = 'konsole';
+      args = ['--separate', '-e', 'bash', '-l', '-c', commandToRun];
+      break;
+    case 'xfce4-terminal':
+    case 'mate-terminal':
+      term = terminal;
+      args = ['--window', '--command', `bash -l -c "${commandToRun}"`];
+      break;
+    case 'io.elementary.terminal':
+    case 'lxterminal':
+    case 'qterminal':
+      term = terminal;
+      args = ['-e', `bash -l -c "${commandToRun}"`];
+      break;
+    default:
+      // A generic fallback for other terminals like terminator, alacritty etc.
+      term = terminal;
+      args = ['-e', `bash -l -c "${commandToRun}"`];
+  }
+
+  try {
+    const child = spawn(term, args, {
+      detached: true,
+      stdio: 'ignore'
+    });
+    child.on('error', (err) => {
+        console.error(`[ERROR] Failed to spawn terminal '${term}': ${err.message}`);
+    });
+    child.unref();
+  } catch (err) {
+    console.error(`[ERROR] Failed to execute spawn for terminal '${terminal}': ${err.message}`);
+    throw new Error(`Failed to launch terminal '${terminal}': ${err.message}`);
+  }
+});
+
 
 ipcMain.handle('list-containers', async () => {
   try {

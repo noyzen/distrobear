@@ -26,6 +26,13 @@ const App: React.FC = () => {
     }
   };
 
+  const handleRerunSetup = async () => {
+    setAppState('checking');
+    const result = await window.electronAPI.checkDependencies();
+    setSetupInfo(result);
+    setAppState('setup-required');
+  };
+
   useEffect(() => {
     performDependencyCheck();
   }, []);
@@ -35,7 +42,7 @@ const App: React.FC = () => {
       case 'my-containers':
         return <MyContainers setCurrentPage={setCurrentPage} />;
       case 'system-info':
-        return <SystemInfo />;
+        return <SystemInfo onRerunSetup={handleRerunSetup} />;
       case 'create-new':
       case 'local-images':
       case 'download-images':

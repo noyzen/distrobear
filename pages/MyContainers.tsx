@@ -54,6 +54,12 @@ const LightningBoltIcon: React.FC<{ className?: string; title?: string; }> = ({ 
     </svg>
 );
 
+const TerminalIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
+    </svg>
+);
+
 const ToggleSwitch: React.FC<{ isOn: boolean; onToggle: () => void; disabled?: boolean; }> = ({ isOn, onToggle, disabled }) => {
   return (
     <button
@@ -123,6 +129,17 @@ const ContainerRow: React.FC<{
       performAction(action);
   }
 
+  const handleEnterClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActionError(null);
+    try {
+        await window.electronAPI.containerEnter(container.name);
+    } catch (err) {
+        console.error(`Failed to enter container:`, err);
+        setActionError(err instanceof Error ? err.message : "An unknown error occurred.");
+    }
+  };
+
   const handleAutostartToggle = () => {
     if (isActionInProgress) return;
 
@@ -183,7 +200,7 @@ const ContainerRow: React.FC<{
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4 space-y-4 divide-y divide-primary-light">
-                <div className="flex items-center justify-center pt-2">
+                <div className="flex items-center justify-center pt-2 gap-4">
                     {isUp ? (
                         <ActionButton onClick={(e) => handleActionClick(e, 'stop')} disabled={isActionInProgress} isStopButton>
                         {isActionInProgress ? '...' : 'Stop'}
@@ -193,6 +210,15 @@ const ContainerRow: React.FC<{
                         {isActionInProgress ? '...' : 'Start'}
                         </ActionButton>
                     )}
+                     <button
+                        onClick={(e) => handleEnterClick(e)}
+                        disabled={isActionInProgress}
+                        className="w-28 flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed bg-primary-light text-gray-200 hover:bg-gray-500"
+                        title="Open a terminal in this container"
+                    >
+                        <TerminalIcon className="w-4 h-4" />
+                        Enter
+                    </button>
                 </div>
 
                 <div className="flex items-center justify-between pt-4">

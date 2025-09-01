@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import type { OSInfo } from '../types';
 
+interface SystemInfoProps {
+  onRerunSetup: () => void;
+}
+
 const InfoItem: React.FC<{ label: string; value: string | number }> = ({ label, value }) => (
   <div className="flex justify-between items-center bg-primary-light p-4 rounded-lg">
     <span className="font-semibold text-gray-300">{label}</span>
@@ -8,19 +12,22 @@ const InfoItem: React.FC<{ label: string; value: string | number }> = ({ label, 
   </div>
 );
 
-const SystemInfo: React.FC = () => {
+const SystemInfo: React.FC<SystemInfoProps> = ({ onRerunSetup }) => {
   const [osInfo, setOsInfo] = useState<OSInfo | null>(null);
+  const [terminal, setTerminal] = useState<string>('Detecting...');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchOSInfo = async () => {
+  const fetchSystemInfo = async () => {
     setIsLoading(true);
     setError(null);
     try {
       const info = await window.electronAPI.getOSInfo();
       setOsInfo(info);
+      const term = await window.electronAPI.getTerminal();
+      setTerminal(term ?? 'Not Found');
     } catch (err) {
-      console.error("Error fetching OS info:", err);
+      console.error("Error fetching system info:", err);
       setError(err instanceof Error ? err.message : "An unknown error occurred.");
     } finally {
       setIsLoading(false);
@@ -28,7 +35,7 @@ const SystemInfo: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchOSInfo();
+    fetchSystemInfo();
   }, []);
   
   const formatBytes = (bytes: number) => {
@@ -55,25 +62,38 @@ const SystemInfo: React.FC = () => {
           </div>
         )}
 
-        {osInfo && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InfoItem label="Platform" value={osInfo.platform} />
-            <InfoItem label="Architecture" value={osInfo.arch} />
-            <InfoItem label="Hostname" value={osInfo.hostname} />
-            <InfoItem label="OS Release" value={osInfo.release} />
-            <InfoItem label="Total Memory" value={formatBytes(osInfo.totalmem)} />
-            <InfoItem label="Free Memory" value={formatBytes(osInfo.freemem)} />
-          </div>
-        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <InfoItem label="Default Terminal" value={terminal} />
+          {osInfo && (
+            <>
+              <InfoItem label="Platform" value={osInfo.platform} />
+              <InfoItem label="Architecture" value={osInfo.arch} />
+              <InfoItem label="Hostname" value={osInfo.hostname} />
+              <InfoItem label="OS Release" value={osInfo.release} />
+              <InfoItem label="Total Memory" value={formatBytes(osInfo.totalmem)} />
+              <InfoItem label="Free Memory" value={formatBytes(osInfo.freemem)} />
+            </>
+          )}
+        </div>
 
         <div className="pt-4 flex justify-center">
           <button
-            onClick={fetchOSInfo}
+            onClick={fetchSystemInfo}
             disabled={isLoading}
             className="px-8 py-3 bg-accent text-charcoal font-bold rounded-full hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-accent/50"
           >
             {isLoading ? 'Loading...' : 'Refresh System Info'}
           </button>
+        </div>
+        
+        <div className="pt-6 border-t border-primary-light text-center space-y-3">
+            <p className="text-sm text-gray-400">Need to reinstall or repair dependencies?</p>
+            <button
+                onClick={onRerunSetup}
+                className="px-6 py-2 bg-primary-light text-gray-200 font-semibold rounded-lg hover:bg-accent hover:text-charcoal transition-all duration-200"
+            >
+                Run Setup Wizard Manually
+            </button>
         </div>
       </main>
     </div>

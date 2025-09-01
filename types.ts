@@ -38,6 +38,8 @@ export interface IElectronAPI {
   containerStop: (name: string) => Promise<void>;
   containerAutostartEnable: (name: string) => Promise<void>;
   containerAutostartDisable: (name: string) => Promise<void>;
+  containerEnter: (name: string) => Promise<void>;
+  getTerminal: () => Promise<string | null>;
 }
 
 declare global {
