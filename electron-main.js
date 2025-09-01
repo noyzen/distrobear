@@ -208,8 +208,14 @@ function runCommandStreamed(command, args = [], onData, onProcess) {
         onProcess(child);
     }
 
+    let stderr = ''; // To capture error output
+
     child.stdout.on('data', (data) => onData(data.toString()));
-    child.stderr.on('data', (data) => onData(data.toString())); // Pipe stderr to the same handler
+    child.stderr.on('data', (data) => {
+      const chunk = data.toString();
+      stderr += chunk;
+      onData(chunk); // Still pipe to the UI for real-time feedback
+    });
 
     child.on('close', (code, signal) => {
       const commandToRunForLogging = `${command} ${args.map(a => `'${a}'`).join(' ')}`;
@@ -219,8 +225,8 @@ function runCommandStreamed(command, args = [], onData, onProcess) {
         return;
       }
       if (code !== 0) {
-        console.error(`[ERROR] Streamed command "${commandToRunForLogging}" failed with code ${code}.`);
-        reject(new Error(`Process exited with code ${code}`));
+        console.error(`[ERROR] Streamed command "${commandToRunForLogging}" failed with code ${code}. Stderr:\n${stderr}`);
+        reject(new Error(stderr.trim() || `Process exited with code ${code}`));
       } else {
         console.log(`[INFO] Streamed command "${commandToRunForLogging}" finished successfully.`);
         resolve();
