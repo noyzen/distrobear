@@ -26,34 +26,37 @@ const ApplicationRow: React.FC<{
   app: ExportableApplication;
   onActionComplete: () => void;
 }> = ({ app, onActionComplete }) => {
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingAction, setProcessingAction] = useState<'share' | 'unshare' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleAction = async () => {
-    setIsProcessing(true);
+  const handleShare = async () => {
+    setProcessingAction('share');
     setError(null);
-    const action = app.isExported ? 'unshare' : 'share';
     try {
-      if (action === 'share') {
-        await window.electronAPI.applicationExport({ containerName: app.containerName, appName: app.appName });
-      } else {
-        await window.electronAPI.applicationUnexport({ containerName: app.containerName, appName: app.appName });
-      }
+      await window.electronAPI.applicationExport({ containerName: app.containerName, appName: app.appName });
       onActionComplete();
     } catch (err) {
-      console.error(`Failed to ${action} for ${app.name}:`, err);
-      setError(err instanceof Error ? err.message : "An unknown error occurred.");
+      console.error(`Failed to share ${app.name}:`, err);
+      setError(err instanceof Error ? err.message : "An unknown error occurred while sharing.");
     } finally {
-      setIsProcessing(false);
+      setProcessingAction(null);
     }
   };
 
-  const buttonLabel = app.isExported ? 'Unshare' : 'Share';
-  const processingLabel = app.isExported ? 'Unsharing' : 'Sharing';
+  const handleUnshare = async () => {
+    setProcessingAction('unshare');
+    setError(null);
+    try {
+      await window.electronAPI.applicationUnexport({ containerName: app.containerName, appName: app.appName });
+      onActionComplete();
+    } catch (err) {
+      console.error(`Failed to unshare ${app.name}:`, err);
+      setError(err instanceof Error ? err.message : "An unknown error occurred while unsharing.");
+    } finally {
+      setProcessingAction(null);
+    }
+  };
 
-  const buttonClasses = app.isExported
-    ? 'bg-red-600 text-white hover:bg-red-500'
-    : 'bg-accent text-charcoal hover:bg-accent-light';
 
   return (
     <motion.div
@@ -74,22 +77,35 @@ const ApplicationRow: React.FC<{
             </div>
         )}
       </div>
-      <div className="flex-shrink-0 ml-4">
+      <div className="flex-shrink-0 ml-4 flex gap-2">
         <button
-          onClick={handleAction}
-          disabled={isProcessing}
-          className={`w-28 flex items-center justify-center px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed ${
-            isProcessing ? '' : buttonClasses
-          }`}
-          title={app.isExported ? `Remove ${app.name} from the host.` : `Share ${app.name} with the host.`}
+          onClick={handleShare}
+          disabled={!!processingAction}
+          className="w-28 flex items-center justify-center px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-accent text-charcoal hover:bg-accent-light disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
+          title={`Share ${app.name} with the host.`}
         >
-          {isProcessing ? (
+          {processingAction === 'share' ? (
             <>
               <SpinnerIcon />
-              {processingLabel}
+              Sharing
             </>
           ) : (
-            buttonLabel
+            'Share'
+          )}
+        </button>
+        <button
+          onClick={handleUnshare}
+          disabled={!!processingAction}
+          className="w-28 flex items-center justify-center px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-red-600 text-white hover:bg-red-500 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
+          title={`Remove ${app.name} from the host.`}
+        >
+          {processingAction === 'unshare' ? (
+            <>
+              <SpinnerIcon />
+              Unsharing
+            </>
+          ) : (
+            'Unshare'
           )}
         </button>
       </div>
