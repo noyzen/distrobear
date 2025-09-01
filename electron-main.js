@@ -1018,6 +1018,25 @@ ipcMain.handle('get-os-info', () => ({
   freemem: os.freemem(),
 }));
 
+ipcMain.handle('get-version-info', async () => {
+  const getVersion = async (command, args, regex) => {
+    try {
+      // Using runCommand to ensure we get the correct PATH from the login shell
+      const output = await runCommand(command, args);
+      const match = output.match(regex);
+      return match ? match[1] : (output.trim() || 'Not Found');
+    } catch (e) {
+      console.warn(`Could not get version for ${command}: ${e.message}`);
+      return 'Not Found';
+    }
+  };
+
+  const distroboxVersion = await getVersion('distrobox', ['--version'], /distrobox version: (\S+)/);
+  const podmanVersion = await getVersion('podman', ['--version'], /version (\S+)/);
+
+  return { distrobox: distroboxVersion, podman: podmanVersion };
+});
+
 app.whenReady().then(() => {
   createWindow();
   app.on('activate', () => {

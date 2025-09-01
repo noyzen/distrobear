@@ -7,6 +7,11 @@ export interface OSInfo {
   freemem: number;
 }
 
+export interface VersionInfo {
+  distrobox: string;
+  podman: string;
+}
+
 export interface Container {
   name: string;
   status: string;
@@ -82,6 +87,7 @@ export interface CreateContainerOptions {
 
 export interface IElectronAPI {
   getOSInfo: () => Promise<OSInfo>;
+  getVersionInfo: () => Promise<VersionInfo>;
   listContainers: () => Promise<Container[]>;
   minimizeWindow: () => void;
   maximizeWindow: () => void;

@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   containerEnter: (name) => ipcRenderer.invoke('container-enter', name),
   // System Info
   getTerminal: () => ipcRenderer.invoke('get-terminal'),
+  getVersionInfo: () => ipcRenderer.invoke('get-version-info'),
   // Application Management
   listApplications: () => ipcRenderer.invoke('list-applications'),
   applicationExport: (args) => ipcRenderer.invoke('application-export', args),

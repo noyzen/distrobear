@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { OSInfo } from '../types';
+import type { OSInfo, VersionInfo } from '../types';
 
 interface SystemInfoProps {
   onRerunSetup: () => void;
@@ -14,6 +14,7 @@ const InfoItem: React.FC<{ label: string; value: string | number }> = ({ label, 
 
 const SystemInfo: React.FC<SystemInfoProps> = ({ onRerunSetup }) => {
   const [osInfo, setOsInfo] = useState<OSInfo | null>(null);
+  const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
   const [terminal, setTerminal] = useState<string>('Detecting...');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,6 +27,8 @@ const SystemInfo: React.FC<SystemInfoProps> = ({ onRerunSetup }) => {
       setOsInfo(info);
       const term = await window.electronAPI.getTerminal();
       setTerminal(term ?? 'Not Found');
+      const versions = await window.electronAPI.getVersionInfo();
+      setVersionInfo(versions);
     } catch (err) {
       console.error("Error fetching system info:", err);
       setError(err instanceof Error ? err.message : "An unknown error occurred.");
@@ -51,7 +54,7 @@ const SystemInfo: React.FC<SystemInfoProps> = ({ onRerunSetup }) => {
       <header className="mb-6">
         <h1 className="text-3xl font-bold text-center text-gray-100">System & Info</h1>
         <p className="text-center text-gray-400 mt-2">
-          System information provided by the Node.js backend.
+          Key information about your system and container setup.
         </p>
       </header>
 
@@ -63,6 +66,12 @@ const SystemInfo: React.FC<SystemInfoProps> = ({ onRerunSetup }) => {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {versionInfo && (
+            <>
+              <InfoItem label="Distrobox Version" value={versionInfo.distrobox} />
+              <InfoItem label="Podman Version" value={versionInfo.podman} />
+            </>
+          )}
           <InfoItem label="Default Terminal" value={terminal} />
           {osInfo && (
             <>
@@ -71,7 +80,6 @@ const SystemInfo: React.FC<SystemInfoProps> = ({ onRerunSetup }) => {
               <InfoItem label="Hostname" value={osInfo.hostname} />
               <InfoItem label="OS Release" value={osInfo.release} />
               <InfoItem label="Total Memory" value={formatBytes(osInfo.totalmem)} />
-              <InfoItem label="Free Memory" value={formatBytes(osInfo.freemem)} />
             </>
           )}
         </div>
@@ -80,9 +88,9 @@ const SystemInfo: React.FC<SystemInfoProps> = ({ onRerunSetup }) => {
           <button
             onClick={fetchSystemInfo}
             disabled={isLoading}
-            className="px-8 py-3 bg-accent text-charcoal font-bold rounded-full hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-accent/50"
+            className="px-8 py-3 bg-accent text-charcoal font-bold rounded-full hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-accent/50 flex items-center justify-center gap-2"
           >
-            {isLoading ? 'Loading...' : 'Refresh System Info'}
+            {isLoading ? 'Loading...' : <><ArrowPathIcon /> Refresh System Info</>}
           </button>
         </div>
         
@@ -95,9 +103,24 @@ const SystemInfo: React.FC<SystemInfoProps> = ({ onRerunSetup }) => {
                 Run Setup Wizard Manually
             </button>
         </div>
+        
+         <div className="pt-6 border-t border-primary-light text-center space-y-4">
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">
+                <a href="https://github.com/noyzen/distrobear" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-300 hover:text-accent transition-colors">
+                    Project on GitHub <ArrowTopRightOnSquareIcon />
+                </a>
+                <a href="https://distrobox.it/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-300 hover:text-accent transition-colors">
+                    Distrobox Website <ArrowTopRightOnSquareIcon />
+                </a>
+            </div>
+            <p className="text-sm text-gray-500 pt-2">Created by noyzen</p>
+        </div>
       </main>
     </div>
   );
 };
+
+const ArrowPathIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12c0 4.142-3.358 7.5-7.5 7.5S4.5 16.142 4.5 12 7.858 4.5 12 4.5c2.36 0 4.471.956 6.012 2.502m1.488-2.492v4.98h-4.98" /></svg>;
+const ArrowTopRightOnSquareIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5M21 3L12 12" /></svg>;
 
 export default SystemInfo;
