@@ -696,19 +696,21 @@ ipcMain.handle('list-applications', async () => {
     // 3. Map over ONLY running containers to find all apps in parallel
     const allAppsPromises = runningContainers.map(async ({ name: containerName }) => {
         
-        // From the list of all exported files, create a set of app identifiers
-        // that are exported specifically for the current container.
-        const exportedAppIdentifiers = new Set(
-            exportedFilesOnHost
-                .filter(f => f.endsWith(`-${containerName}.desktop`))
-                .map(f => {
-                    // Extract the app identifier from the filename.
-                    // e.g., "distrobox-audacious-myapps-fedora42.desktop" -> "audacious"
-                    const prefix = 'distrobox-';
-                    const suffix = `-${containerName}.desktop`;
-                    return f.substring(prefix.length, f.length - suffix.length);
-                })
-        );
+        // Use a more robust regex to find and extract app identifiers for this container.
+        // This avoids potential pitfalls with substring manipulation if names contain hyphens.
+        const escapedContainerName = containerName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const appIdentifierRegex = new RegExp(`^distrobox-(.*?)-${escapedContainerName}\\.desktop$`);
+        
+        const exportedAppIdentifiers = new Set();
+        // We iterate over ALL exported files on the host and use the regex to both
+        // filter for the ones belonging to the current container and extract the app name.
+        for (const hostFile of exportedFilesOnHost) {
+          const match = hostFile.match(appIdentifierRegex);
+          // match[0] is the full string, match[1] is the first capture group (the app identifier)
+          if (match && match[1]) {
+            exportedAppIdentifiers.add(match[1]);
+          }
+        }
         
         try {
             // Find all .desktop files within the container
