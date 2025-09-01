@@ -53,7 +53,8 @@ const ContainerRow: React.FC<{
   isSelected: boolean;
   onSelect: () => void;
   onActionComplete: () => void;
-}> = ({ container, isSelected, onSelect, onActionComplete }) => {
+  isLast: boolean;
+}> = ({ container, isSelected, onSelect, onActionComplete, isLast }) => {
   const [isActionInProgress, setIsActionInProgress] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   
@@ -85,14 +86,22 @@ const ContainerRow: React.FC<{
   return (
     <motion.div 
         layout="position"
-        className="border-b border-primary-light last:border-b-0"
+        className={`
+            relative transition-all duration-300 ease-in-out
+            ${ isSelected
+                ? 'z-10 scale-[1.02] my-1 rounded-lg border border-accent shadow-[0_0_20px_theme(colors.accent.DEFAULT)_/_50%]'
+                : `z-0 scale-100 border-b ${isLast ? 'border-transparent' : 'border-primary-light'}`
+            }
+        `}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
     >
       <div
         onClick={onSelect}
-        className={`flex items-center p-4 cursor-pointer transition-colors duration-200 ${isSelected ? 'bg-primary-light' : 'hover:bg-primary-light/50'}`}
+        className={`flex items-center p-4 cursor-pointer transition-colors duration-200 hover:bg-primary-light/50
+            ${ isSelected ? 'bg-primary-light rounded-t-lg' : '' }
+        `}
       >
         <StatusIndicator status={container.status} />
         <div className="flex-1 min-w-0">
@@ -116,7 +125,7 @@ const ContainerRow: React.FC<{
               collapsed: { opacity: 0, height: 0 }
             }}
             transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
-            className="overflow-hidden bg-primary-dark/30"
+            className="overflow-hidden bg-primary-dark/30 rounded-b-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4 flex items-center justify-center">
@@ -220,15 +229,16 @@ const MyContainers: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setC
     }
 
     return (
-      <motion.div className="bg-primary rounded-lg shadow-md overflow-hidden" layout>
+      <motion.div className="bg-primary rounded-lg shadow-md" layout>
         <AnimatePresence initial={false}>
-            {filteredContainers.map((container) => (
+            {filteredContainers.map((container, index) => (
             <ContainerRow
                 key={container.name}
                 container={container}
                 isSelected={selectedContainer === container.name}
                 onSelect={() => handleSelectContainer(container.name)}
                 onActionComplete={() => fetchContainers(true)}
+                isLast={index === filteredContainers.length - 1}
             />
             ))}
         </AnimatePresence>
