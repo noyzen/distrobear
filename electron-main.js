@@ -580,10 +580,98 @@ ipcMain.handle('container-info', async (event, name) => {
     throw new Error('Invalid container name provided.');
   }
   try {
-    const output = await runCommand('distrobox', ['info', '--name', sanitizedName, '--json']);
-    return JSON.parse(output);
+    // We will parse the text output for better compatibility with older distrobox versions
+    // that may not support the --json flag.
+    const output = await runCommand('distrobox', ['info', '--name', sanitizedName]);
+    
+    // The type definition for ContainerInfo, used as a template to ensure we return a valid object.
+    const info = {
+        additional_flags: null,
+        entrypoint: '',
+        home_dir: '',
+        hostname: '',
+        id: '',
+        image: '',
+        init: false,
+        init_path: '',
+        name: sanitizedName,
+        nvidia: false,
+        pull: false,
+        replace: false,
+        root: false,
+        start_now: false,
+        status: '',
+        user_name: '',
+        user_shell: '',
+        volumes: [],
+    };
+    
+    const lines = output.split('\n');
+    let parsingVolumes = false;
+
+    // Mapping from text label to JSON key and type for robust parsing.
+    const keyMap = {
+      'ID': { key: 'id', type: 'string' },
+      'Name': { key: 'name', type: 'string' },
+      'Status': { key: 'status', type: 'string' },
+      'Image': { key: 'image', type: 'string' },
+      'Entrypoint': { key: 'entrypoint', type: 'string' },
+      'Init': { key: 'init', type: 'boolean' },
+      'Init path': { key: 'init_path', type: 'string' },
+      'User name': { key: 'user_name', type: 'string' },
+      'User shell': { key: 'user_shell', type: 'string' },
+      'Home dir': { key: 'home_dir', type: 'string' },
+      'Hostname': { key: 'hostname', type: 'string' },
+      'Nvidia': { key: 'nvidia', type: 'boolean' },
+      'Pull': { key: 'pull', type: 'boolean' },
+      'Root': { key: 'root', type: 'boolean' },
+      'Replace': { key: 'replace', type: 'boolean' },
+      'Start now': { key: 'start_now', type: 'boolean' },
+      'Additional Flags': { key: 'additional_flags', type: 'string' },
+    };
+
+    for (const line of lines) {
+        if (line.trim().startsWith('Volumes:')) {
+            parsingVolumes = true;
+            continue;
+        }
+
+        if (parsingVolumes) {
+            // Indented lines are volume paths.
+            if (line.trim() && /^\s+/.test(line)) {
+                info.volumes.push(line.trim());
+                continue; // Skip to next line after processing volume
+            } else {
+                // A non-indented line means the volumes section has ended.
+                parsingVolumes = false;
+            }
+        }
+
+        // Regular key-value parsing for all other lines.
+        const parts = line.split(/:\s+/);
+        if (parts.length < 2) continue; // Skip lines that aren't key-value pairs.
+
+        const key = parts[0].trim();
+        const valueStr = parts.slice(1).join(': ').trim();
+        
+        const mapping = keyMap[key];
+        if (mapping) {
+            if (mapping.type === 'boolean') {
+                info[mapping.key] = valueStr.toLowerCase() === 'true';
+            } else {
+                if (mapping.key === 'additional_flags' && (valueStr === '(null)' || valueStr === '')) {
+                    info[mapping.key] = null;
+                } else {
+                    info[mapping.key] = valueStr;
+                }
+            }
+        }
+    }
+    
+    return info;
+
   } catch (err) {
-    throw new Error(`Failed to get info for container "${sanitizedName}". This might mean your distrobox version is too old to support JSON output. Error: ${err.message}`);
+    throw new Error(`Failed to get info for container "${sanitizedName}". Error: ${err.message}`);
   }
 });
 
