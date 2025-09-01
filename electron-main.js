@@ -238,8 +238,10 @@ ipcMain.handle('container-start', async (event, name) => {
       throw new Error('Invalid container name provided.');
   }
   try {
-    // Use 'start' for non-interactive startup
-    return await runCommand('distrobox', ['start', sanitizedName]);
+    // Use 'distrobox enter' with a simple command to reliably start the container
+    // and leave it running. This is more robust than 'distrobox start' which is
+    // for services and might not work on all containers.
+    return await runCommand('distrobox', ['enter', sanitizedName, '--', '/bin/true']);
   } catch (err) {
     throw new Error(`Failed to start container "${sanitizedName}": ${err.message}`);
   }
