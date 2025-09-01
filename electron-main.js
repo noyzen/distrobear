@@ -681,43 +681,36 @@ ipcMain.handle('list-applications', async () => {
         return { applications: [], unscannedContainers };
     }
     
-    // 2. Get all exported app files from the host's application directory.
-    // This is the single source of truth for what is exported.
-    const hostAppDir = path.join(os.homedir(), '.local', 'share', 'applications');
-    let exportedFilesOnHost = [];
-    try {
-        const allFiles = await fs.readdir(hostAppDir);
-        exportedFilesOnHost = allFiles.filter(f => f.startsWith('distrobox-') && f.endsWith('.desktop'));
-    } catch (err) {
-        // This is not a critical error; the directory might not exist yet.
-        console.warn(`Could not read host application directory '${hostAppDir}': ${err.message}`);
-    }
-
-    // 3. Map over ONLY running containers to find all apps in parallel
+    // 2. Map over ONLY running containers to find all apps in parallel
     const allAppsPromises = runningContainers.map(async ({ name: containerName }) => {
         try {
-            // Step 1: Find all potential .desktop files within the container.
+            // Step A: Get a list of already exported app identifiers directly from distrobox.
+            // This is the most reliable way to determine export status.
+            const listExportsCmd = ['enter', containerName, '--', 'distrobox-export', '--list-exports'];
+            const listExportsOutput = await runCommand('distrobox', listExportsCmd).catch(() => '');
+            const exportedAppIdentifiers = new Set(listExportsOutput.split('\n').filter(Boolean).map(line => line.trim()));
+
+            // Step B: Find all potential .desktop files within the container.
             const findCommand = `find /usr/share/applications /usr/local/share/applications ~/.local/share/applications -path '*/.local/share/applications' -prune -o -name "*.desktop" -type f -print 2>/dev/null`;
             const findOutput = await runCommand('distrobox', ['enter', containerName, '--', 'sh', '-c', findCommand]).catch(() => '');
             if (!findOutput) return [];
             const desktopFiles = findOutput.split('\n').filter(Boolean);
 
-            // Step 2: For each file, check if it's exported and gather its details.
+            // Step C: For each file, get its details and check against our set of exported apps.
             const appDetailsPromises = desktopFiles.map(async (desktopFile) => {
                 try {
                     const appName = path.basename(desktopFile); // e.g., 'firefox.desktop'
                     const appIdentifier = appName.replace(/\.desktop$/, ''); // e.g., 'firefox'
 
-                    // Step 2a: Determine if exported by checking for the exact filename on the host. This is robust.
-                    const expectedExportedFile = `distrobox-${appIdentifier}-${containerName}.desktop`;
-                    const isExported = exportedFilesOnHost.includes(expectedExportedFile);
+                    // Determine if exported by checking the set we created in Step A.
+                    const isExported = exportedAppIdentifiers.has(appIdentifier);
                     
-                    // Step 2b: Get the display name from inside the container.
+                    // Get the display name from inside the container.
                     const escapedFile = `'${desktopFile.replace(/'/g, "'\\''")}'`;
                     const getNameCommand = `grep -m 1 '^Name' ${escapedFile} | cut -d'=' -f2-`;
                     const displayName = await runCommand('distrobox', ['enter', containerName, '--', 'sh', '-c', getNameCommand]);
 
-                    // Step 2c: Check if the application is marked as hidden.
+                    // Check if the application is marked as hidden.
                     const getNoDisplayCommand = `grep -q '^NoDisplay=true' ${escapedFile}`;
                     const isHidden = await runCommand('distrobox', ['enter', containerName, '--', 'sh', '-c', getNoDisplayCommand], { supressErrorLoggingForExitCodes: [1] })
                         .then(() => true)
@@ -751,7 +744,7 @@ ipcMain.handle('list-applications', async () => {
     const nestedApps = await Promise.all(allAppsPromises);
     const applications = nestedApps.flat().sort((a, b) => a.name.localeCompare(b.name));
 
-    // 4. Return the final payload
+    // 3. Return the final payload
     return { applications, unscannedContainers };
 });
 
