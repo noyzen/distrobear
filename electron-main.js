@@ -681,29 +681,9 @@ ipcMain.handle('list-applications', async () => {
         return { applications: [], unscannedContainers };
     }
 
-    // 2. Iterate through running containers to find which apps are exported. This is more
-    // compatible with older distrobox versions, as per user feedback.
-    const exportedAppsByContainer = new Map();
-    const exportedAppPromises = runningContainers.map(async ({ name: containerName }) => {
-        try {
-            // FIX: Use `--list-exported` to get the list of currently shared applications.
-            // The `--list-apps` flag shows all *available* applications, not their current export status.
-            const listAppsArgs = ['enter', containerName, '--', 'distrobox-export', '--list-exported'];
-            const output = await runCommand('distrobox', listAppsArgs);
-            const appIdentifiers = new Set(output.split('\n').filter(Boolean).map(line => line.trim()));
-            exportedAppsByContainer.set(containerName, appIdentifiers);
-        } catch (err) {
-            console.warn(`Could not list exported apps for '${containerName}' (may be normal if none are exported). Error: ${err.message}`);
-            // Ensure the map entry exists even on failure, so we don't get undefined later.
-            exportedAppsByContainer.set(containerName, new Set());
-        }
-    });
-    await Promise.all(exportedAppPromises);
-
-    // 3. Map over ONLY running containers to find all apps in parallel
+    // 2. Map over ONLY running containers to find all apps in parallel
     const allAppsPromises = runningContainers.map(async ({ name: containerName }) => {
         try {
-            const exportedApps = exportedAppsByContainer.get(containerName) || new Set();
             const findCommand = `find /usr/share/applications /usr/local/share/applications ~/.local/share/applications -path '*/.local/share/applications' -prune -o -name "*.desktop" -type f -print 2>/dev/null`;
             const findOutput = await runCommand('distrobox', ['enter', containerName, '--', 'sh', '-c', findCommand]).catch(() => '');
             if (!findOutput) return [];
@@ -711,17 +691,27 @@ ipcMain.handle('list-applications', async () => {
 
             const appDetailsPromises = desktopFiles.map(async (desktopFile) => {
                 try {
-                    const appName = path.basename(desktopFile);
-                    const appIdentifier = appName.replace(/\.desktop$/, '');
+                    const appName = path.basename(desktopFile); // e.g., 'audacious.desktop'
+                    const appIdentifier = appName.replace(/\.desktop$/, ''); // e.g., 'audacious'
+                    
+                    // NEW: Check for exported file existence on the host. This is the most reliable method.
+                    const hostDesktopFileName = `distrobox-${appIdentifier}-${containerName}.desktop`;
+                    const hostDesktopFilePath = path.join(os.homedir(), '.local', 'share', 'applications', hostDesktopFileName);
+                    
+                    const isExported = await fs.access(hostDesktopFilePath)
+                        .then(() => true) // File exists
+                        .catch(() => false); // File does not exist
+
+                    // Get display name
                     const escapedFile = `'${desktopFile.replace(/'/g, "'\\''")}'`;
                     const getNameCommand = `grep -m 1 '^Name' ${escapedFile} | cut -d'=' -f2-`;
                     const displayName = await runCommand('distrobox', ['enter', containerName, '--', 'sh', '-c', getNameCommand]);
 
-                    // Use grep -q which exits 1 (error) on not found. Suppress logging for this expected "failure".
+                    // Check if it's a hidden entry
                     const getNoDisplayCommand = `grep -q '^NoDisplay=true' ${escapedFile}`;
                     const isHidden = await runCommand('distrobox', ['enter', containerName, '--', 'sh', '-c', getNoDisplayCommand], { supressErrorLoggingForExitCodes: [1] })
-                        .then(() => true) // Command succeeded, so NoDisplay=true exists
-                        .catch(() => false); // Command failed, so NoDisplay=true does not exist
+                        .then(() => true)
+                        .catch(() => false);
 
                     if (!displayName || isHidden || displayName.toLowerCase().includes('wayland')) {
                         return null;
@@ -731,7 +721,7 @@ ipcMain.handle('list-applications', async () => {
                         name: displayName.trim(),
                         appName: appName,
                         containerName: containerName,
-                        isExported: exportedApps.has(appIdentifier)
+                        isExported: isExported, // Use the new reliable check
                     };
                 } catch (e) {
                     console.error(`Error processing desktop file ${desktopFile} in ${containerName}: ${e.message}`);
@@ -749,7 +739,7 @@ ipcMain.handle('list-applications', async () => {
     const nestedApps = await Promise.all(allAppsPromises);
     const applications = nestedApps.flat().sort((a, b) => a.name.localeCompare(b.name));
 
-    // 4. Return the final payload
+    // 3. Return the final payload
     return { applications, unscannedContainers };
 });
 
