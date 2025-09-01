@@ -37,31 +37,27 @@ const TitleBar: React.FC = () => {
 
 // SVG Icons for Window Controls
 const MinimizeIcon = () => (
-  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M0 5H10" stroke="#9CA3AF" strokeWidth="1.5"/>
-  </svg>
-);
-
-const MaximizeIcon = () => (
-  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="0.5" y="0.5" width="9" height="9" stroke="#9CA3AF"/>
-  </svg>
-);
-
-const RestoreIcon = () => (
-    <svg width="10" height="10" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 0H2C0.9 0 0 0.9 0 2V8H2V2H8V0Z" fill="#9CA3AF"/>
-        <path d="M11 3H5C4.4 3 4 3.4 4 4V10C4 10.6 4.4 11 5 11H11C11.6 11 12 10.6 12 10V4C12 3.4 11.6 3 11 3Z" fill="#9CA3AF"/>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-gray-400">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" />
     </svg>
 );
 
-
-const CloseIcon = () => (
-  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M1 1L9 9" stroke="#9CA3AF" strokeWidth="1.5"/>
-    <path d="M9 1L1 9" stroke="#9CA3AF" strokeWidth="1.5"/>
-  </svg>
+const MaximizeIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-gray-400">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+    </svg>
 );
 
+const RestoreIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-gray-400">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5M15 15l5.25 5.25" />
+    </svg>
+);
+
+const CloseIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-gray-400">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+);
 
 export default TitleBar;

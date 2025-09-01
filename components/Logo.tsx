@@ -6,43 +6,39 @@ const Logo: React.FC<{ className?: string }> = ({ className }) => (
     viewBox="0 0 100 100" 
     xmlns="http://www.w3.org/2000/svg" 
     aria-label="DistroBear Logo"
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="4" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
   >
-    <g transform="translate(50, 50)">
-      {/* Box shape behind */}
-      <path 
-        d="M -35 -20 L 0 -40 L 35 -20 L 35 20 L 0 40 L -35 20 Z" 
-        fill="currentColor" 
-        className="text-primary-light"
-      />
+    {/* Hexagon Box */}
+    <path 
+      d="M 50,5 L 95,27.5 L 95,72.5 L 50,95 L 5,72.5 L 5,27.5 Z" 
+      className="text-primary-light"
+    />
+    
+    {/* Bear Head */}
+    <g transform="translate(50, 52)" className="text-accent">
+      {/* Ears */}
+      <path d="M -18,-18 a 10 10 0 0 1 12 -2" />
+      <path d="M 18,-18 a 10 10 0 0 0 -12 -2" />
       
-      {/* Bear Head */}
-      <g className="text-accent">
-        {/* Face */}
-        <path 
-          d="M -25,15 C -30,-5, 30,-5, 25,15 C 20,30, -20,30, -25,15 Z" 
-          fill="currentColor"
-        />
-        {/* Ears */}
-        <circle cx="-20" cy="-12" r="8" fill="currentColor" />
-        <circle cx="20" cy="-12" r="8" fill="currentColor" />
-        {/* Inner Ears */}
-        <circle cx="-20" cy="-12" r="4" fill="black" className="opacity-20" />
-        <circle cx="20" cy="-12" r="4" fill="black" className="opacity-20" />
-      </g>
+      {/* Head Outline */}
+      <path d="M -25,10 C -30,-15, 30,-15, 25,10 C 20,25, -20,25, -25,10 Z" />
+
+      {/* Muzzle */}
+      <path d="M 0,5 a 8 8 0 0 1 0 10 a 8 8 0 0 1 0 -10" />
+
+      {/* Nose */}
+      <path d="M -4,10 l 4,-4 l 4,4" />
       
-      {/* Bear Features (on top of head) */}
-      <g className="text-charcoal">
-        {/* Eyes */}
-        <circle cx="-10" cy="0" r="2.5" fill="currentColor" />
-        <circle cx="10" cy="0" r="2.5" fill="currentColor" />
-        {/* Muzzle */}
-        <path 
-          d="M -8,12 C -10,5, 10,5, 8,12 C 5,18, -5,18, -8,12 Z" 
-          fill="currentColor" 
-          className="opacity-20"
-        />
-        {/* Nose */}
-        <path d="M 0,8 L -3,12 L 3,12 Z" fill="currentColor" />
+      {/* Eyes */}
+      <g strokeWidth="3">
+         <path d="M -12,-2 L -8,2" />
+         <path d="M -8,-2 L -12,2" />
+         <path d="M 12,-2 L 8,2" />
+         <path d="M 8,-2 L 12,2" />
       </g>
     </g>
   </svg>
