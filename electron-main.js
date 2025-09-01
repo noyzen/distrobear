@@ -170,37 +170,39 @@ ipcMain.handle('install-dependencies', async () => {
 
 /**
  * A robust helper for running shell commands.
- * It executes the given command inside a login shell to ensure the user's full
- * environment (PATH, XDG_RUNTIME_DIR, etc.) is loaded, which is critical for
- * tools like distrobox and podman.
- * It also prepares a clean environment before spawning the shell to avoid
- * conflicts with user startup scripts (e.g., nvm).
+ * It executes the given command inside a simple, non-login shell to avoid
+ * sourcing user profiles (.bash_profile, etc.) which can interfere (e.g., nvm).
+ * It prepares a clean environment before spawning the shell to ensure the
+ * correct PATH is set and to avoid conflicts with user startup scripts.
  * @param {string} command The command to execute (e.g., 'distrobox').
  * @param {string[]} [args=[]] An array of arguments for the command.
  * @returns {Promise<string>} A promise that resolves with the command's stdout.
  */
 function runCommand(command, args = []) {
   return new Promise((resolve, reject) => {
-    // Escape arguments to prevent shell injection and join into a single string.
     const commandString = [command, ...args.map(a => `'${a}'`)].join(' ');
     
-    // Create a sanitized environment for the login shell.
-    // 1. Start with the current process's environment.
-    // 2. Add the user's local bin directory to the PATH for distrobox.
-    // 3. Critically, delete the conflicting variable *before* spawning the shell.
+    // Create a sanitized environment.
     const spawnEnv = {
       ...process.env,
       PATH: `${process.env.PATH || ''}:${path.join(os.homedir(), '.local', 'bin')}`
     };
     delete spawnEnv.npm_config_prefix;
     
-    console.log(`[INFO] Spawning via login shell: ${commandString}`);
+    // TEMPORARY DEBUG LOGS
+    console.log(`[DEBUG] --- Preparing to run command ---`);
+    console.log(`[DEBUG] Full command: ${commandString}`);
+    console.log(`[DEBUG] Using PATH: ${spawnEnv.PATH}`);
+    if (process.env.npm_config_prefix) {
+      console.log(`[DEBUG] Original npm_config_prefix was present, but has been unset for child process.`);
+    } else {
+      console.log(`[DEBUG] Original npm_config_prefix was not set.`);
+    }
+    console.log(`[DEBUG] Spawning simple shell (/bin/bash -c) instead of login shell.`);
 
-    // Execute the command within a login shell (`bash -l -c ...`).
-    // The shell will inherit our sanitized `spawnEnv`. When it sources the
-    // user's profile scripts, the conflicting variable will not be present,
-    // preventing nvm (or other tools) from failing during shell initialization.
-    const child = spawn('/bin/bash', ['-l', '-c', commandString], { env: spawnEnv });
+    // Execute the command within a simple, non-login shell.
+    // This avoids sourcing user profiles which can interfere (e.g., nvm).
+    const child = spawn('/bin/bash', ['-c', commandString], { env: spawnEnv });
 
     let stdout = '';
     let stderr = '';
