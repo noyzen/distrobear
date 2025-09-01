@@ -1,7 +1,7 @@
 {
-  "name": "electron-react-app",
+  "name": "distrobox-gui",
   "version": "1.0.0",
-  "description": "An Electron application with React and TypeScript",
+  "description": "A GUI to manage distrobox containers",
   "main": "electron-main.js",
   "homepage": "./",
   "scripts": {
@@ -11,6 +11,7 @@
     "electron:build": "npm run react:build && electron-builder"
   },
   "dependencies": {
+    "framer-motion": "^11.2.12",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -29,8 +30,8 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.example.electronreactapp",
-    "productName": "ElectronReactApp",
+    "appId": "com.example.distrobox-gui",
+    "productName": "Distrobox GUI",
     "files": [
       "dist/**/*",
       "electron-main.js",

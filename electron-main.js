@@ -1,30 +1,76 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const os = require('os');
+const { exec } = require('child_process');
+
+// Function to parse the output of `distrobox list --verbose`
+function parseDistroboxList(output) {
+  const lines = output.trim().split('\n');
+  if (lines.length < 2) return [];
+
+  const headers = lines[0].split('|').map(h => h.trim().toLowerCase());
+  const nameIndex = headers.indexOf('name');
+  const statusIndex = headers.indexOf('status');
+  const imageIndex = headers.indexOf('image');
+
+  if (nameIndex === -1 || statusIndex === -1 || imageIndex === -1) {
+    console.error("Could not find required headers in distrobox list output");
+    return [];
+  }
+  
+  return lines.slice(1).map(line => {
+    const parts = line.split('|').map(p => p.trim());
+    return {
+      name: parts[nameIndex],
+      status: parts[statusIndex],
+      image: parts[imageIndex],
+    };
+  });
+}
+
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1024,
+    height: 768,
+    minWidth: 800,
+    minHeight: 600,
     webPreferences: {
       preload: path.join(__dirname, 'electron-preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
+    titleBarStyle: 'hidden',
+    trafficLightPosition: { x: 15, y: 15 },
   });
 
-  // Vite dev server URL
   const viteDevServerURL = 'http://localhost:5173';
 
-  // Load the Vite dev server URL in development, or the built HTML file in production.
   if (app.isPackaged) {
     mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
   } else {
     mainWindow.loadURL(viteDevServerURL);
-    // Open DevTools for debugging, only in development
     mainWindow.webContents.openDevTools();
   }
 }
+
+// IPC handler to list distrobox containers
+ipcMain.handle('list-containers', async () => {
+  return new Promise((resolve, reject) => {
+    // Use --no-color to get clean text, and --verbose to get more details
+    exec('distrobox list --no-color --verbose', (error, stdout, stderr) => {
+      if (error) {
+        // If the command fails, it might be because distrobox is not installed.
+        if (stderr.includes("command not found")) {
+           return reject(new Error('Distrobox command not found. Is distrobox installed and in your PATH?'));
+        }
+        return reject(new Error(`Error executing distrobox: ${stderr}`));
+      }
+      resolve(parseDistroboxList(stdout));
+    });
+  });
+});
+
 
 // IPC handler to get OS info
 ipcMain.handle('get-os-info', () => {

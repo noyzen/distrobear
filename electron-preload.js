@@ -4,4 +4,5 @@ const { contextBridge, ipcRenderer } = require('electron');
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
   getOSInfo: () => ipcRenderer.invoke('get-os-info'),
+  listContainers: () => ipcRenderer.invoke('list-containers'),
 });
