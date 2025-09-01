@@ -14,89 +14,6 @@ const execOptions = {
   }
 };
 
-/**
- * A more robust parser for the 'distrobox list' command.
- * It handles multi-line entries for a single container by grouping lines
- * before parsing columns. This prevents data from wrapping and being
- * incorrectly assigned to other fields.
- *
- * @param {string} output The raw string output from the command.
- * @returns {Array<{name: string, status: string, image: string}>}
- */
-function parseDistroboxList(output) {
-  const lines = output.trim().split('\n');
-  if (lines.length < 2) return [];
-
-  const headerLine = lines[0];
-  const knownHeaders = ['NAME', 'STATUS', 'CREATED', 'IMAGE'];
-  
-  const headerPositions = knownHeaders
-    .map(h => ({ name: h, pos: headerLine.indexOf(h) }))
-    .filter(h => h.pos !== -1)
-    .sort((a, b) => a.pos - b.pos);
-
-  const nameHeader = headerPositions.find(h => h.name === 'NAME');
-  const statusHeader = headerPositions.find(h => h.name === 'STATUS');
-  const imageHeader = headerPositions.find(h => h.name === 'IMAGE');
-
-  if (!nameHeader || !statusHeader || !imageHeader) {
-    console.error("Could not parse 'distrobox list' headers. Required headers NAME, STATUS, IMAGE not found.");
-    console.error("Received header:", headerLine);
-    return [];
-  }
-  
-  for (let i = 0; i < headerPositions.length; i++) {
-    const nextHeader = headerPositions[i + 1];
-    headerPositions[i].endPos = nextHeader ? nextHeader.pos : undefined;
-  }
-
-  const getColumnValue = (line, headerName) => {
-    const header = headerPositions.find(h => h.name === headerName);
-    if (!header) return '';
-    return line.substring(header.pos, header.endPos).trim();
-  };
-
-  const rawRecords = [];
-  let currentRecordLines = [];
-
-  // Group lines into records. A new record starts with a non-whitespace character,
-  // subsequent wrapped lines start with whitespace.
-  for (const line of lines.slice(1)) {
-    if (line.trim().startsWith('-')) continue; // Skip separator lines
-
-    if (line.length > 0 && line[0].trim() !== '') {
-      if (currentRecordLines.length > 0) {
-        rawRecords.push(currentRecordLines);
-      }
-      currentRecordLines = [line];
-    } else {
-      if (currentRecordLines.length > 0) {
-        currentRecordLines.push(line);
-      }
-    }
-  }
-  if (currentRecordLines.length > 0) {
-    rawRecords.push(currentRecordLines);
-  }
-
-  // Parse each grouped record by joining the parts from each line
-  return rawRecords.map(recordLines => {
-    // For NAME and IMAGE, we expect long strings that might wrap mid-word.
-    // Concatenating them directly is the correct approach.
-    const name = recordLines.map(line => getColumnValue(line, 'NAME')).filter(Boolean).join('');
-    const image = recordLines.map(line => getColumnValue(line, 'IMAGE')).filter(Boolean).join('');
-
-    // For STATUS, parts are likely separate words if wrapped, so we join with a space
-    // and then normalize any resulting extra whitespace.
-    const status = recordLines.map(line => getColumnValue(line, 'STATUS')).filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
-    
-    if (!name || !status || !image) return null;
-    
-    return { name, status, image };
-  }).filter(Boolean);
-}
-
-
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1024,
@@ -263,11 +180,39 @@ function runCommand(command, args = []) {
 
 ipcMain.handle('list-containers', async () => {
   try {
-    const output = await runCommand('distrobox', ['list', '--no-color']);
-    return parseDistroboxList(output);
+    const usePodman = await commandExists('podman');
+    const useDocker = await commandExists('docker');
+
+    let command, args;
+
+    if (usePodman) {
+      command = 'podman';
+    } else if (useDocker) {
+      command = 'docker';
+    } else {
+      throw new Error('No container runtime (Podman or Docker) found.');
+    }
+
+    // Use a structured format to avoid parsing issues. This is far more reliable.
+    // The tab separator is unlikely to appear in names, images, or statuses.
+    args = ['ps', '-a', '--filter', 'label=manager=distrobox', '--format', '{{.Names}}\t{{.Image}}\t{{.Status}}'];
+
+    const output = await runCommand(command, args);
+    if (!output) return [];
+
+    return output.trim().split('\n').map(line => {
+      if (!line.trim()) return null;
+      const [name, image, status] = line.split('\t');
+      return { name, image, status };
+    }).filter(Boolean); // Filter out any null entries from empty lines
+
   } catch (err) {
+    console.error(`Failed to list containers: ${err.message}`);
     if (err.message && err.message.includes("command not found")) {
-      throw new Error('Distrobox command not found. Is distrobox installed and in your PATH?');
+      throw new Error('Container runtime (podman/docker) not found. Is it installed and in your PATH?');
+    }
+    if (err.message && err.message.includes("Cannot connect to the Docker daemon")) {
+        throw new Error('Could not connect to the Docker daemon. Please ensure the Docker service is running.');
     }
     throw new Error(`Failed to list containers: ${err.message}`);
   }

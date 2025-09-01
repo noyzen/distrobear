@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { Container, Page } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// --- Local Components for MyContainers Page ---
 
 const StatusIndicator: React.FC<{ status: string }> = ({ status }) => {
   const isUp = status.toLowerCase().startsWith('up');
   return (
-    <div className="flex items-center overflow-hidden">
-      <span className={`flex-shrink-0 h-3 w-3 rounded-full mr-2 ${isUp ? 'bg-accent' : 'bg-gray-500'} ${isUp ? 'animate-pulse' : ''}`}></span>
-      <span title={status} className={`truncate min-w-0 ${isUp ? 'text-accent-light' : 'text-gray-400'}`}>{status}</span>
+    <div className="flex-shrink-0 w-8 text-center">
+      <div className={`h-3 w-3 rounded-full mx-auto ${isUp ? 'bg-accent' : 'bg-gray-500'} ${isUp ? 'animate-pulse' : ''}`} title={isUp ? 'Running' : 'Stopped'}></div>
     </div>
   );
 };
@@ -16,113 +17,132 @@ const ActionButton: React.FC<{ onClick: (e: React.MouseEvent) => void; disabled:
   <button
     onClick={onClick}
     disabled={disabled}
-    className={`flex-1 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 disabled:bg-gray-600 disabled:cursor-not-allowed
+    className={`w-28 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed
       ${primary ? 'bg-accent text-charcoal hover:bg-accent-light' : ''}
-      ${isStopButton ? 'bg-primary-light text-gray-300 hover:bg-red-500 hover:text-white' : ''}
+      ${isStopButton ? 'bg-red-600 text-white hover:bg-red-500' : ''}
       `}
   >
     {children}
   </button>
 );
 
+const SearchIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+  </svg>
+);
 
-const ContainerCard: React.FC<{ 
-  container: Container; 
-  index: number; 
+const ChevronIcon: React.FC<{ isSelected: boolean }> = ({ isSelected }) => (
+    <motion.svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={2}
+        stroke="currentColor"
+        className="w-6 h-6 text-gray-400"
+        animate={{ rotate: isSelected ? 180 : 0 }}
+        transition={{ duration: 0.2 }}
+    >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+    </motion.svg>
+);
+
+
+const ContainerRow: React.FC<{
+  container: Container;
   isSelected: boolean;
   onSelect: () => void;
   onActionComplete: () => void;
-}> = ({ container, index, isSelected, onSelect, onActionComplete }) => {
+}> = ({ container, isSelected, onSelect, onActionComplete }) => {
   const [isActionInProgress, setIsActionInProgress] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-
-  const handleStop = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsActionInProgress(true);
-    setActionError(null);
-    try {
-      await window.electronAPI.containerStop(container.name);
-      onActionComplete();
-    } catch (err) {
-      console.error("Failed to stop container:", err);
-      setActionError(err instanceof Error ? err.message : "An unknown error occurred.");
-    } finally {
-      setIsActionInProgress(false);
-    }
-  };
-
-  const handleStart = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsActionInProgress(true);
-    setActionError(null);
-    try {
-      await window.electronAPI.containerStart(container.name);
-      onActionComplete();
-    } catch (err) {
-      console.error("Failed to start container:", err);
-      setActionError(err instanceof Error ? err.message : "An unknown error occurred.");
-    } finally {
-      setIsActionInProgress(false);
-    }
-  };
   
   const isUp = container.status.toLowerCase().startsWith('up');
 
+  const performAction = async (action: 'start' | 'stop') => {
+    setIsActionInProgress(true);
+    setActionError(null);
+    try {
+      if (action === 'start') {
+        await window.electronAPI.containerStart(container.name);
+      } else {
+        await window.electronAPI.containerStop(container.name);
+      }
+      onActionComplete();
+    } catch (err) {
+      console.error(`Failed to ${action} container:`, err);
+      setActionError(err instanceof Error ? err.message : "An unknown error occurred.");
+    } finally {
+      setIsActionInProgress(false);
+    }
+  };
+
+  const handleActionClick = (e: React.MouseEvent, action: 'start' | 'stop') => {
+      e.stopPropagation();
+      performAction(action);
+  }
+
   return (
-    <motion.div
-      layout
-      onClick={onSelect}
-      className={`bg-primary rounded-lg shadow-lg overflow-hidden border border-primary-light cursor-pointer transition-all duration-300
-        ${isSelected ? 'ring-2 ring-accent shadow-accent/20' : 'hover:border-accent/50'}`}
-      variants={{
-        hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0 },
-      }}
-      initial="hidden"
-      animate="visible"
-      exit="hidden"
-      transition={{ duration: 0.3, delay: index * 0.05 }}
+    <motion.div 
+        layout="position"
+        className="border-b border-primary-light last:border-b-0"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
     >
-      <div className="p-5">
-        <h3 className="text-xl font-bold text-gray-100 truncate">{container.name}</h3>
-        <p className="text-sm text-gray-400 mt-1 truncate" title={container.image}>{container.image}</p>
-      </div>
-      <div className="px-5 py-3 bg-primary-dark/50">
+      <div
+        onClick={onSelect}
+        className={`flex items-center p-4 cursor-pointer transition-colors duration-200 ${isSelected ? 'bg-primary-light' : 'hover:bg-primary-light/50'}`}
+      >
         <StatusIndicator status={container.status} />
+        <div className="flex-1 min-w-0">
+          <h3 className="text-lg font-bold text-gray-100 truncate">{container.name}</h3>
+          <p className="text-xs text-gray-400 mt-1 truncate" title={container.image}>{container.image}</p>
+        </div>
+        <p className="flex-shrink-0 hidden md:block text-sm text-gray-400 mx-4 min-w-0 truncate" title={container.status}>{container.status}</p>
+        <div className="flex-shrink-0">
+          <ChevronIcon isSelected={isSelected} />
+        </div>
       </div>
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {isSelected && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-            onClick={(e) => e.stopPropagation()} // Prevents closing when clicking the action area
+          <motion.section
+            key="content"
+            initial="collapsed"
+            animate="open"
+            exit="collapsed"
+            variants={{
+              open: { opacity: 1, height: 'auto' },
+              collapsed: { opacity: 0, height: 0 }
+            }}
+            transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
+            className="overflow-hidden bg-primary-dark/30"
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4 border-t border-primary-light bg-primary-dark/30 flex items-center space-x-3">
+            <div className="p-4 flex items-center justify-center">
               {isUp ? (
-                <ActionButton onClick={handleStop} disabled={isActionInProgress} isStopButton>
+                <ActionButton onClick={(e) => handleActionClick(e, 'stop')} disabled={isActionInProgress} isStopButton>
                   {isActionInProgress ? 'Stopping...' : 'Stop'}
                 </ActionButton>
               ) : (
-                <ActionButton onClick={handleStart} disabled={isActionInProgress} primary>
+                <ActionButton onClick={(e) => handleActionClick(e, 'start')} disabled={isActionInProgress} primary>
                   {isActionInProgress ? 'Starting...' : 'Start'}
                 </ActionButton>
               )}
             </div>
             {actionError && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="p-3 border-t border-primary-light bg-red-900/50 text-red-300 text-xs"
+                className="px-4 pb-4"
               >
-                <p className="font-sans font-bold mb-1">Action Failed</p>
-                <pre className="whitespace-pre-wrap break-words font-mono">{actionError}</pre>
+                <div className="p-3 bg-red-900/50 text-red-300 text-xs rounded-md border border-red-700/50">
+                    <p className="font-sans font-bold mb-1">Action Failed</p>
+                    <pre className="whitespace-pre-wrap break-words font-mono">{actionError}</pre>
+                </div>
               </motion.div>
             )}
-          </motion.div>
+          </motion.section>
         )}
       </AnimatePresence>
     </motion.div>
@@ -130,14 +150,17 @@ const ContainerCard: React.FC<{
 };
 
 
+// --- Main Page Component ---
+
 const MyContainers: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCurrentPage }) => {
   const [containers, setContainers] = useState<Container[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedContainer, setSelectedContainer] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchContainers = async () => {
-    // Don't set loading to true on refresh to avoid UI flicker
+  const fetchContainers = async (isRefresh = false) => {
+    if (!isRefresh) setIsLoading(true);
     setError(null);
     try {
       const result = await window.electronAPI.listContainers();
@@ -157,14 +180,23 @@ const MyContainers: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setC
   const handleSelectContainer = (name: string) => {
     setSelectedContainer(prev => (prev === name ? null : name));
   };
+  
+  const filteredContainers = useMemo(() => {
+    const lowerCaseQuery = searchQuery.toLowerCase();
+    if (!lowerCaseQuery) return containers;
+    return containers.filter(c => 
+        c.name.toLowerCase().includes(lowerCaseQuery) ||
+        c.image.toLowerCase().includes(lowerCaseQuery)
+    );
+  }, [containers, searchQuery]);
 
   const renderContent = () => {
-    if (isLoading && containers.length === 0) {
-      return <p className="text-center text-gray-400">Loading containers...</p>;
+    if (isLoading) {
+      return <p className="text-center text-gray-400 p-8">Loading containers...</p>;
     }
     if (error) {
       return (
-        <div className="bg-red-900/50 border border-red-700 text-red-300 p-4 rounded-lg">
+        <div className="bg-red-900/50 border border-red-700 text-red-300 p-4 rounded-lg m-4">
           <p className="font-bold">Failed to load containers:</p>
           <p className="mt-2 font-mono text-sm">{error}</p>
         </div>
@@ -178,43 +210,65 @@ const MyContainers: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setC
         </div>
       )
     }
+    if (filteredContainers.length === 0) {
+        return (
+            <div className="text-center py-10">
+               <p className="text-gray-400 text-lg">No containers match your search.</p>
+               <p className="text-gray-500 mt-2">Try a different search term or clear the search.</p>
+           </div>
+         )
+    }
+
     return (
-      <motion.div 
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        layout
-      >
-        {containers.map((container, index) => (
-          <ContainerCard 
-            key={container.name} 
-            container={container} 
-            index={index}
-            isSelected={selectedContainer === container.name}
-            onSelect={() => handleSelectContainer(container.name)}
-            onActionComplete={fetchContainers}
-          />
-        ))}
+      <motion.div className="bg-primary rounded-lg shadow-md overflow-hidden" layout>
+        <AnimatePresence initial={false}>
+            {filteredContainers.map((container) => (
+            <ContainerRow
+                key={container.name}
+                container={container}
+                isSelected={selectedContainer === container.name}
+                onSelect={() => handleSelectContainer(container.name)}
+                onActionComplete={() => fetchContainers(true)}
+            />
+            ))}
+        </AnimatePresence>
       </motion.div>
     );
   };
   
   return (
     <div className="container mx-auto">
-      <header className="flex justify-between items-center mb-6 gap-4">
-        <h1 className="text-3xl font-bold text-gray-100">My Containers</h1>
-        <div className="flex items-center gap-4">
-          <button
-              onClick={() => setCurrentPage('create-new')}
-              className="px-5 py-2 bg-primary-light text-gray-200 font-bold rounded-lg hover:bg-accent hover:text-charcoal transition-all duration-300"
-          >
-            Create New
-          </button>
-          <button
-              onClick={fetchContainers}
-              disabled={isLoading}
-              className="px-5 py-2 bg-accent text-charcoal font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-300"
-          >
-            {isLoading ? 'Refreshing...' : 'Refresh'}
-          </button>
+      <header className="flex flex-wrap justify-between items-center mb-6 gap-4">
+        <h1 className="text-3xl font-bold text-gray-100 w-full md:w-auto">My Containers</h1>
+        
+        <div className="flex-grow flex flex-col-reverse sm:flex-row justify-end items-center gap-4 w-full md:w-auto">
+            <div className="relative w-full sm:max-w-xs">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <SearchIcon className="w-5 h-5 text-gray-400" />
+                </div>
+                <input
+                    type="search"
+                    placeholder="Search containers..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-primary-light border border-primary-light rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/50"
+                />
+            </div>
+            <div className="flex gap-4 w-full sm:w-auto">
+                 <button
+                    onClick={() => setCurrentPage('create-new')}
+                    className="flex-1 sm:flex-none px-5 py-2 bg-primary-light text-gray-200 font-semibold rounded-lg hover:bg-accent hover:text-charcoal transition-all duration-200"
+                >
+                    Create
+                </button>
+                <button
+                    onClick={() => fetchContainers(true)}
+                    disabled={isLoading}
+                    className="flex-1 sm:flex-none px-5 py-2 bg-accent text-charcoal font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-200"
+                >
+                    {isLoading ? '...' : 'Refresh'}
+                </button>
+            </div>
         </div>
       </header>
       {renderContent()}
