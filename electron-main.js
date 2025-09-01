@@ -50,6 +50,32 @@ const commandExists = (command) => {
   });
 };
 
+/**
+ * Checks if a systemd user service is enabled.
+ * This is more robust than using `runCommand` because it correctly handles
+ * the non-zero exit code that `systemctl is-enabled` returns for a disabled service.
+ * @param {string} serviceName The name of the service to check (e.g., 'container-my-app.service').
+ * @returns {Promise<boolean>} A promise that resolves to true if the service is enabled, false otherwise.
+ */
+const isSystemdServiceEnabled = (serviceName) => {
+  return new Promise((resolve) => {
+    // We don't need a login shell here, systemctl should be in the standard PATH.
+    const child = spawn('systemctl', ['--user', 'is-enabled', '--quiet', serviceName]);
+    child.on('close', (code) => {
+      // According to systemctl man pages:
+      // code 0 = enabled
+      // code 1 = disabled, not found, or other non-error failure
+      // We only care about code 0.
+      resolve(code === 0);
+    });
+    child.on('error', (err) => {
+      // This would happen if 'systemctl' command itself is not found.
+      console.error(`[ERROR] Failed to spawn systemctl to check service "${serviceName}": ${err.message}`);
+      resolve(false);
+    });
+  });
+};
+
 // IPC handler for dependency checking
 ipcMain.handle('check-dependencies', async () => {
   const deps = ['distrobox', 'podman', 'docker'];
@@ -205,16 +231,9 @@ ipcMain.handle('list-containers', async () => {
     
     return Promise.all(lines.map(async line => {
       const [name, image, status] = line.split('\t');
-      let isAutostartEnabled = false;
-      try {
-        const serviceName = `container-${name}.service`;
-        // 'is-enabled' returns exit code 0 if enabled, 1 if disabled.
-        // We can treat any error (e.g., service not found) as 'not enabled'.
-        await runCommand('systemctl', ['--user', 'is-enabled', '--quiet', serviceName]);
-        isAutostartEnabled = true;
-      } catch (e) {
-        isAutostartEnabled = false;
-      }
+      const serviceName = `container-${name}.service`;
+      // Use the robust helper to check autostart status without logging errors for disabled services.
+      const isAutostartEnabled = await isSystemdServiceEnabled(serviceName);
       return { name, image, status, isAutostartEnabled };
     }));
 
@@ -297,10 +316,13 @@ ipcMain.handle('container-autostart-enable', async (event, name) => {
     const tempServicePath = path.join(tempDir, serviceFileName);
     const finalServicePath = path.join(systemdUserPath, serviceFileName);
 
-    await fs.rename(tempServicePath, finalServicePath);
+    // Use fs.copyFile instead of fs.rename to avoid "cross-device link" errors
+    // when /tmp and /home are on different filesystems.
+    await fs.copyFile(tempServicePath, finalServicePath);
     await runCommand('systemctl', ['--user', 'daemon-reload']);
     await runCommand('systemctl', ['--user', 'enable', serviceFileName]);
   } finally {
+    // Clean up the temporary directory regardless of success or failure.
     await fs.rm(tempDir, { recursive: true, force: true });
   }
 });
