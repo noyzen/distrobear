@@ -694,42 +694,15 @@ ipcMain.handle('list-applications', async () => {
                 const filePath = path.join(hostAppsPath, filename);
                 const content = await fs.readFile(filePath, 'utf-8');
                 
-                let containerNameFromHostFile = null;
-                const execLineMatch = content.match(/^Exec=(.*)$/m); // Find Exec line
+                // Use the reliable X-Distrobox-Container key instead of parsing the Exec line.
+                // This is the modern and correct way to identify exported apps.
+                const containerLineMatch = content.match(/^X-Distrobox-Container=(.*)$/m);
                 
-                if (execLineMatch) {
-                    const command = execLineMatch[1];
-                    const tokens = command.split(/\s+/);
-                    
-                    // Find where `distrobox enter` starts.
-                    const distroboxIndex = tokens.findIndex(t => t.endsWith('/distrobox') || t === 'distrobox');
-                    
-                    if (distroboxIndex !== -1 && tokens[distroboxIndex + 1] === 'enter') {
-                        const args = tokens.slice(distroboxIndex + 2);
-                        
-                        for (let i = 0; i < args.length; i++) {
-                            const arg = args[i];
-
-                            if (arg === '--') { // Stop parsing at '--'
-                                break;
-                            }
-
-                            if (arg === '--name' || arg === '-n') {
-                                if (i + 1 < args.length) {
-                                    containerNameFromHostFile = args[i + 1].replace(/['"]/g, '');
-                                    break;
-                                }
-                            } else if (!arg.startsWith('-')) {
-                                // First non-flag argument is the container name
-                                containerNameFromHostFile = arg.replace(/['"]/g, '');
-                                break;
-                            }
-                        }
+                if (containerLineMatch && containerLineMatch[1]) {
+                    const containerName = containerLineMatch[1].trim();
+                    if (containerName) {
+                        exportedAppToContainerMap.set(filename, containerName);
                     }
-                }
-
-                if (containerNameFromHostFile) {
-                    exportedAppToContainerMap.set(filename, containerNameFromHostFile);
                 }
             } catch (e) {
                 // Ignore errors reading individual files (e.g., permission denied)
