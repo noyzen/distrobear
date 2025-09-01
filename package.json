@@ -11,6 +11,7 @@
     "electron:build": "npm run react:build && electron-builder"
   },
   "dependencies": {
+    "electron-store": "^8.2.0",
     "framer-motion": "^11.2.12",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

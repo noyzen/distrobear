@@ -4,7 +4,9 @@ const os = require('os');
 const { exec, spawn } = require('child_process');
 const sudo = require('sudo-prompt');
 const fs = require('fs').promises;
+const Store = require('electron-store');
 
+const store = new Store();
 let mainWindow; // Reference to the main window
 
 // Define a common options object for exec calls that need the modified PATH
@@ -16,9 +18,10 @@ const execOptions = {
 };
 
 function createWindow() {
+  const windowBounds = store.get('windowBounds', { width: 1024, height: 768 });
+
   mainWindow = new BrowserWindow({
-    width: 1024,
-    height: 768,
+    ...windowBounds,
     minWidth: 800,
     minHeight: 600,
     webPreferences: {
@@ -29,6 +32,10 @@ function createWindow() {
     frame: false,
     transparent: true,
     backgroundColor: '#00000000',
+  });
+
+  mainWindow.on('close', () => {
+    store.set('windowBounds', mainWindow.getBounds());
   });
 
   mainWindow.on('maximize', () => mainWindow.webContents.send('window-state-change', true));

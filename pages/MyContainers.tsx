@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import type { Container, Page, ContainerInfo } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
+import ToggleSwitch from '../components/ToggleSwitch';
 
 // --- Local Components for MyContainers Page ---
 
@@ -371,27 +372,6 @@ const InformationCircleIcon: React.FC<{ className?: string }> = ({ className }) 
         <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
     </svg>
 );
-
-const ToggleSwitch: React.FC<{ isOn: boolean; onToggle: () => void; disabled?: boolean; }> = ({ isOn, onToggle, disabled }) => {
-  return (
-    <button
-      onClick={onToggle}
-      disabled={disabled}
-      className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-accent/50 ${
-        isOn ? 'bg-accent' : 'bg-primary-light'
-      } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
-    >
-      <motion.span
-        className="inline-block w-4 h-4 transform bg-white rounded-full"
-        layout
-        transition={{ type: 'spring', stiffness: 700, damping: 30 }}
-        initial={false}
-        animate={{ x: isOn ? '1.5rem' : '0.25rem' }}
-      />
-    </button>
-  );
-};
-
 
 const ContainerRow: React.FC<{
   container: Container;
