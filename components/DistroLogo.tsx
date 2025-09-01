@@ -135,7 +135,6 @@ const DistroLogo: React.FC<{ imageName: string; className?: string }> = ({ image
   const { name, LogoComponent, color } = getDistroInfo(imageName);
   
   return (
-    // FIX: Replaced the invalid 'title' prop with a <title> child element for accessibility and to fix the TypeScript error.
     <LogoComponent
       className={className}
       style={{ color }}
