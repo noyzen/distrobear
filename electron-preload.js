@@ -27,4 +27,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   listApplications: () => ipcRenderer.invoke('list-applications'),
   applicationExport: (args) => ipcRenderer.invoke('application-export', args),
   applicationUnexport: (args) => ipcRenderer.invoke('application-unexport', args),
+  // Container Creation
+  listLocalImages: () => ipcRenderer.invoke('list-local-images'),
+  containerCreate: (options) => ipcRenderer.invoke('container-create', options),
+  onCreationLog: (callback) => ipcRenderer.on('creation-log', (_event, log) => callback(log)),
 });

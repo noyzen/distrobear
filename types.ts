@@ -62,6 +62,24 @@ export interface DependencyCheckResult {
   needsSetup: boolean;
 }
 
+export interface LocalImage {
+  repository: string;
+  tag: string;
+  id: string;
+  size: string;
+  created: string;
+}
+
+export interface CreateContainerOptions {
+  name: string;
+  image: string;
+  init: boolean;
+  nvidia: boolean;
+  isolated: boolean;
+  customHome: string;
+  volumes: { hostPath: string; containerPath: string }[];
+}
+
 export interface IElectronAPI {
   getOSInfo: () => Promise<OSInfo>;
   listContainers: () => Promise<Container[]>;
@@ -84,6 +102,9 @@ export interface IElectronAPI {
   listApplications: () => Promise<ApplicationList>;
   applicationExport: (args: { containerName: string, appName: string }) => Promise<void>;
   applicationUnexport: (args: { containerName: string, appName: string }) => Promise<void>;
+  listLocalImages: () => Promise<LocalImage[]>;
+  containerCreate: (options: CreateContainerOptions) => Promise<void>;
+  onCreationLog: (callback: (log: string) => void) => void;
 }
 
 declare global {

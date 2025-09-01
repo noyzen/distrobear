@@ -664,6 +664,100 @@ ipcMain.handle('container-info', async (event, name) => {
   }
 });
 
+// Container Creation
+ipcMain.handle('list-local-images', async () => {
+  try {
+    const usePodman = await commandExists('podman');
+    const useDocker = await commandExists('docker');
+    let command;
+
+    if (usePodman) {
+      command = 'podman';
+    } else if (useDocker) {
+      command = 'docker';
+    } else {
+      throw new Error('No container runtime (Podman or Docker) found.');
+    }
+
+    // Format: REPOSITORY:TAG<TAB>SIZE<TAB>ID<TAB>CREATED
+    const imagesArgs = ['images', '--format', '{{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.ID}}\t{{.Created}}'];
+    const output = await runCommand(command, imagesArgs);
+    if (!output) return [];
+
+    return output.trim().split('\n')
+      .filter(line => line.trim() && !line.startsWith('<none>')) // Filter empty lines and untagged images
+      .map(line => {
+        const [repoTag, size, id, created] = line.split('\t');
+        const parts = repoTag.split(':');
+        const tag = parts.pop();
+        const repository = parts.join(':');
+        return { repository, tag, size, id, created };
+      })
+      .sort((a, b) => a.repository.localeCompare(b.repository) || a.tag.localeCompare(b.tag)); // Sort for consistency
+  } catch (err) {
+    console.error(`Failed to list local images: ${err.message}`);
+    throw err;
+  }
+});
+
+ipcMain.handle('container-create', async (event, options) => {
+  const logToFrontend = (data) => mainWindow.webContents.send('creation-log', data.toString());
+
+  // --- 1. Argument Sanitization & Validation ---
+  const { name, image, init, nvidia, isolated, customHome, volumes } = options;
+  const sanitizedName = String(name).replace(/[^a-zA-Z0-9-_\.]/g, '');
+  if (!sanitizedName) throw new Error('Invalid container name provided.');
+  if (!image || typeof image !== 'string') throw new Error('Invalid image provided.');
+
+  // --- 2. Build the command arguments ---
+  const args = ['create', '--name', sanitizedName, '--image', image];
+  
+  if (init) {
+    args.push('--init');
+  }
+  if (nvidia) {
+    args.push('--nvidia');
+  }
+  if (isolated) {
+    let homePath = customHome.trim();
+    if (homePath) {
+        // User provided a path, sanitize it simply for shell safety
+        homePath = homePath.replace(/[`$();|&<>]/g, '');
+    } else {
+        // Auto-generate a path in a standard location
+        homePath = path.join(os.homedir(), '.local', 'share', 'distrobox', 'homes', sanitizedName);
+    }
+    args.push('--home', homePath);
+  }
+
+  // Add volumes, ensuring they are sanitized
+  if (volumes && Array.isArray(volumes)) {
+    for (const volume of volumes) {
+        if (volume.hostPath && volume.containerPath) {
+            const sanitizedHost = String(volume.hostPath).replace(/[`$();|&<>]/g, '');
+            const sanitizedContainer = String(volume.containerPath).replace(/[`$();|&<>]/g, '');
+            if (sanitizedHost && sanitizedContainer) {
+                 args.push('--volume', `${sanitizedHost}:${sanitizedContainer}`);
+            }
+        }
+    }
+  }
+  
+  // --- 3. Execute the command ---
+  try {
+    logToFrontend(`--- Starting creation of container "${sanitizedName}" ---\n`);
+    logToFrontend(`--- Using image: ${image} ---\n`);
+    logToFrontend(`--- Command: distrobox ${args.join(' ')} ---\n\n`);
+
+    await runCommandStreamed('distrobox', args, logToFrontend);
+
+    logToFrontend(`\n--- Container "${sanitizedName}" created successfully! ---\n`);
+  } catch (err) {
+    logToFrontend(`\n--- ERROR: Failed to create container: ${err.message} ---\n`);
+    throw err; // Propagate error to the frontend caller
+  }
+});
+
 
 // Application Management IPC handlers
 ipcMain.handle('list-applications', async () => {

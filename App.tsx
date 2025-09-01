@@ -5,6 +5,7 @@ import SystemInfo from './pages/SystemInfo';
 import Applications from './pages/Applications';
 import TitleBar from './components/TitleBar';
 import SetupWizard from './pages/SetupWizard';
+import CreateContainer from './pages/CreateContainer';
 import type { Page, DependencyCheckResult } from './types';
 
 type AppState = 'checking' | 'setup-required' | 'ready';
@@ -51,6 +52,7 @@ const App: React.FC = () => {
       case 'system-info':
         return <SystemInfo onRerunSetup={handleRerunSetup} />;
       case 'create-new':
+        return <CreateContainer setCurrentPage={setCurrentPage} />;
       case 'local-images':
       case 'download-images':
         return <div className="p-8 text-center"><h1 className="text-3xl font-bold">Coming Soon!</h1><p className="text-gray-400 mt-2">This page is under construction.</p></div>;
