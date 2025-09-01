@@ -80,7 +80,7 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
   } else {
     mainWindow.loadURL(viteDevServerURL);
-    mainWindow.webContents.openDevTools();
+    // mainWindow.webContents.openDevTools();
   }
 }
 
@@ -173,7 +173,7 @@ ipcMain.handle('install-dependencies', async () => {
  * Uses `spawn` for better handling of I/O and avoids buffer issues.
  * Executes commands within a login shell (`bash -l -c`) to ensure the
  * full user environment (PATH, DBUS, etc.) is available.
- * It also unsets the 'npm_config_prefix' env var to prevent conflicts with nvm.
+ * It prevents conflicts with nvm by creating a clean environment for the child process.
  * @param {string} command The command to execute (e.g., 'distrobox').
  * @param {string[]} [args=[]] An array of arguments for the command.
  * @returns {Promise<string>} A promise that resolves with the command's stdout.
@@ -183,15 +183,18 @@ function runCommand(command, args = []) {
     // Basic shell-quoting for args to prevent injection vulnerabilities.
     const quotedArgs = args.map(arg => `'${String(arg).replace(/'/g, "'\\''")}'`);
     const commandToRun = `${command} ${quotedArgs.join(' ')}`;
-    // Prepend 'unset npm_config_prefix' to avoid issues with nvm sourced from .bashrc/.bash_profile
-    const fullCommandString = `unset npm_config_prefix; ${commandToRun}`;
     
     const shell = '/bin/bash';
-    const shellArgs = ['-l', '-c', fullCommandString];
+    const shellArgs = ['-l', '-c', commandToRun];
+
+    // Create a copy of the environment and remove the problematic variable
+    // to prevent conflicts with nvm which can be sourced by the login shell.
+    const spawnEnv = { ...execOptions.env };
+    delete spawnEnv.npm_config_prefix;
     
     console.log(`[INFO] Spawning: ${commandToRun}`);
 
-    const child = spawn(shell, shellArgs, { env: execOptions.env, shell: false });
+    const child = spawn(shell, shellArgs, { env: spawnEnv, shell: false });
 
     let stdout = '';
     let stderr = '';
@@ -239,7 +242,7 @@ ipcMain.handle('container-start', async (event, name) => {
       throw new Error('Invalid container name provided.');
   }
   try {
-    return await runCommand('distrobox', ['start', sanitizedName]);
+    return await runCommand('distrobox', ['enter', sanitizedName]);
   } catch (err) {
     throw new Error(`Failed to start container "${sanitizedName}": ${err.message}`);
   }
