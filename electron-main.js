@@ -760,10 +760,10 @@ ipcMain.handle('application-export', async (event, { containerName, appName }) =
   // Distrobox expects the app name WITHOUT the .desktop suffix.
   const appIdentifier = sanitizedApp.replace(/\.desktop$/, '');
 
-  // Use the host-level `distrobox-export` command with `--name`, which is more
-  // compatible with various distrobox versions as per user feedback.
-  const args = ['--app', appIdentifier, '--name', sanitizedContainer];
-  return await runCommand('distrobox-export', args);
+  // As per user feedback, the correct and most robust method is to run the
+  // `distrobox-export` command from *inside* the container via `distrobox enter`.
+  const args = ['enter', sanitizedContainer, '--', 'distrobox-export', '--app', appIdentifier];
+  return await runCommand('distrobox', args);
 });
 
 ipcMain.handle('application-unexport', async (event, { containerName, appName }) => {
@@ -774,9 +774,9 @@ ipcMain.handle('application-unexport', async (event, { containerName, appName })
   // Distrobox expects the app name WITHOUT the .desktop suffix.
   const appIdentifier = sanitizedApp.replace(/\.desktop$/, '');
 
-  // Use the host-level `distrobox-export` with `--unexport` and `--name`.
-  const args = ['--app', appIdentifier, '--unexport', '--name', sanitizedContainer];
-  return await runCommand('distrobox-export', args);
+  // The unexport command must also be run from inside the container.
+  const args = ['enter', sanitizedContainer, '--', 'distrobox-export', '--app', appIdentifier, '--unexport'];
+  return await runCommand('distrobox', args);
 });
 
 
