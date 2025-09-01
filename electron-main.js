@@ -17,7 +17,8 @@ const execOptions = {
 /**
  * Parses the standard output of 'distrobox list'.
  * It uses header positions to determine column boundaries, making it robust
- * against spaces within fields like 'STATUS' or 'CREATED'.
+ * against spaces within fields like 'STATUS'. It now gracefully handles the
+ * optional presence of the 'CREATED' column.
  * @param {string} output The raw string output from the command.
  * @returns {Array<{name: string, status: string, image: string}>}
  */
@@ -28,17 +29,25 @@ function parseDistroboxList(output) {
   const header = lines[0];
   const namePos = header.indexOf('NAME');
   const statusPos = header.indexOf('STATUS');
-  const createdPos = header.indexOf('CREATED');
+  const createdPos = header.indexOf('CREATED'); // This might be -1
   const imagePos = header.indexOf('IMAGE');
 
-  if ([namePos, statusPos, createdPos, imagePos].some(pos => pos === -1)) {
-    console.error("Could not parse 'distrobox list' headers. Unexpected format.");
+  // Check for the essential headers
+  if (namePos === -1 || statusPos === -1 || imagePos === -1) {
+    console.error("Could not parse 'distrobox list' headers. Required headers NAME, STATUS, IMAGE not found.");
+    console.error("Received header:", header);
     return [];
   }
+  
+  // Determine the end of the STATUS column. It's either the start of CREATED or the start of IMAGE.
+  const statusEndPos = (createdPos !== -1 && createdPos > statusPos) ? createdPos : imagePos;
 
   return lines.slice(1).map(line => {
+    // Skip separator lines like '---|---|---' which some versions might output
+    if (line.trim().startsWith('-')) return null;
+
     const name = line.substring(namePos, statusPos).trim();
-    const status = line.substring(statusPos, createdPos).trim();
+    const status = line.substring(statusPos, statusEndPos).trim();
     const image = line.substring(imagePos).trim();
 
     if (!name || !status || !image) return null;
