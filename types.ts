@@ -11,6 +11,7 @@ export interface Container {
   name: string;
   status: string;
   image: string;
+  isAutostartEnabled: boolean;
 }
 
 export interface DependencyStatus {
@@ -35,6 +36,8 @@ export interface IElectronAPI {
   onInstallationLog: (callback: (log: string) => void) => void;
   containerStart: (name: string) => Promise<void>;
   containerStop: (name: string) => Promise<void>;
+  containerAutostartEnable: (name: string) => Promise<void>;
+  containerAutostartDisable: (name: string) => Promise<void>;
 }
 
 declare global {

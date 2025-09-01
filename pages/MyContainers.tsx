@@ -47,6 +47,33 @@ const ChevronIcon: React.FC<{ isSelected: boolean }> = ({ isSelected }) => (
     </motion.svg>
 );
 
+// FIX: Add title prop to LightningBoltIcon to resolve TypeScript error.
+const LightningBoltIcon: React.FC<{ className?: string; title?: string; }> = ({ className, title }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className} title={title}>
+        <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+    </svg>
+);
+
+const ToggleSwitch: React.FC<{ isOn: boolean; onToggle: () => void; disabled?: boolean; }> = ({ isOn, onToggle, disabled }) => {
+  return (
+    <button
+      onClick={onToggle}
+      disabled={disabled}
+      className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-accent/50 ${
+        isOn ? 'bg-accent' : 'bg-primary-light'
+      } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
+    >
+      <motion.span
+        className="inline-block w-4 h-4 transform bg-white rounded-full"
+        layout
+        transition={{ type: 'spring', stiffness: 700, damping: 30 }}
+        initial={false}
+        animate={{ x: isOn ? '1.5rem' : '0.25rem' }}
+      />
+    </button>
+  );
+};
+
 
 const ContainerRow: React.FC<{
   container: Container;
@@ -60,14 +87,15 @@ const ContainerRow: React.FC<{
   
   const isUp = container.status.toLowerCase().startsWith('up');
 
-  const performAction = async (action: 'start' | 'stop') => {
+  const performAction = async (action: 'start' | 'stop' | 'autostart-enable' | 'autostart-disable') => {
     setIsActionInProgress(true);
     setActionError(null);
     try {
-      if (action === 'start') {
-        await window.electronAPI.containerStart(container.name);
-      } else {
-        await window.electronAPI.containerStop(container.name);
+      switch(action) {
+        case 'start': await window.electronAPI.containerStart(container.name); break;
+        case 'stop': await window.electronAPI.containerStop(container.name); break;
+        case 'autostart-enable': await window.electronAPI.containerAutostartEnable(container.name); break;
+        case 'autostart-disable': await window.electronAPI.containerAutostartDisable(container.name); break;
       }
       onActionComplete();
     } catch (err) {
@@ -81,6 +109,11 @@ const ContainerRow: React.FC<{
   const handleActionClick = (e: React.MouseEvent, action: 'start' | 'stop') => {
       e.stopPropagation();
       performAction(action);
+  }
+
+  const handleAutostartToggle = () => {
+    if (isActionInProgress) return;
+    performAction(container.isAutostartEnabled ? 'autostart-disable' : 'autostart-enable');
   }
 
   return (
@@ -105,7 +138,10 @@ const ContainerRow: React.FC<{
       >
         <StatusIndicator status={container.status} />
         <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-bold text-gray-100 truncate">{container.name}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-bold text-gray-100 truncate">{container.name}</h3>
+            {container.isAutostartEnabled && <LightningBoltIcon className="w-4 h-4 text-yellow-400 flex-shrink-0" title="Autostart Enabled" />}
+          </div>
           <p className="text-xs text-gray-400 mt-1 truncate" title={container.image}>{container.image}</p>
         </div>
         <p className="flex-shrink-0 hidden md:block text-sm text-gray-400 mx-4 min-w-0 truncate" title={container.status}>{container.status}</p>
@@ -128,22 +164,33 @@ const ContainerRow: React.FC<{
             className="overflow-hidden bg-primary-dark/30 rounded-b-lg"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4 flex items-center justify-center">
-              {isUp ? (
-                <ActionButton onClick={(e) => handleActionClick(e, 'stop')} disabled={isActionInProgress} isStopButton>
-                  {isActionInProgress ? 'Stopping...' : 'Stop'}
-                </ActionButton>
-              ) : (
-                <ActionButton onClick={(e) => handleActionClick(e, 'start')} disabled={isActionInProgress} primary>
-                  {isActionInProgress ? 'Starting...' : 'Start'}
-                </ActionButton>
-              )}
+            <div className="p-4 space-y-4 divide-y divide-primary-light">
+                <div className="flex items-center justify-center pt-2">
+                    {isUp ? (
+                        <ActionButton onClick={(e) => handleActionClick(e, 'stop')} disabled={isActionInProgress} isStopButton>
+                        {isActionInProgress ? '...' : 'Stop'}
+                        </ActionButton>
+                    ) : (
+                        <ActionButton onClick={(e) => handleActionClick(e, 'start')} disabled={isActionInProgress} primary>
+                        {isActionInProgress ? '...' : 'Start'}
+                        </ActionButton>
+                    )}
+                </div>
+
+                <div className="flex items-center justify-between pt-4">
+                    <div className="text-sm">
+                        <p className="font-semibold text-gray-200">Autostart on Boot</p>
+                        <p className="text-xs text-gray-400">Requires Podman & systemd</p>
+                    </div>
+                    <ToggleSwitch isOn={container.isAutostartEnabled} onToggle={handleAutostartToggle} disabled={isActionInProgress} />
+                </div>
             </div>
+
             {actionError && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="px-4 pb-4"
+                className="px-4 pb-4 pt-4"
               >
                 <div className="p-3 bg-red-900/50 text-red-300 text-xs rounded-md border border-red-700/50">
                     <p className="font-sans font-bold mb-1">Action Failed</p>

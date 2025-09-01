@@ -15,4 +15,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Container Actions
   containerStart: (name) => ipcRenderer.invoke('container-start', name),
   containerStop: (name) => ipcRenderer.invoke('container-stop', name),
+  containerAutostartEnable: (name) => ipcRenderer.invoke('container-autostart-enable', name),
+  containerAutostartDisable: (name) => ipcRenderer.invoke('container-autostart-disable', name),
 });

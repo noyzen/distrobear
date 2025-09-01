@@ -3,6 +3,7 @@ const path = require('path');
 const os = require('os');
 const { exec, spawn } = require('child_process');
 const sudo = require('sudo-prompt');
+const fs = require('fs').promises;
 
 let mainWindow; // Reference to the main window
 
@@ -200,11 +201,22 @@ ipcMain.handle('list-containers', async () => {
     const output = await runCommand(command, args);
     if (!output) return [];
 
-    return output.trim().split('\n').map(line => {
-      if (!line.trim()) return null;
+    const lines = output.trim().split('\n').filter(line => line.trim());
+    
+    return Promise.all(lines.map(async line => {
       const [name, image, status] = line.split('\t');
-      return { name, image, status };
-    }).filter(Boolean); // Filter out any null entries from empty lines
+      let isAutostartEnabled = false;
+      try {
+        const serviceName = `container-${name}.service`;
+        // 'is-enabled' returns exit code 0 if enabled, 1 if disabled.
+        // We can treat any error (e.g., service not found) as 'not enabled'.
+        await runCommand('systemctl', ['--user', 'is-enabled', '--quiet', serviceName]);
+        isAutostartEnabled = true;
+      } catch (e) {
+        isAutostartEnabled = false;
+      }
+      return { name, image, status, isAutostartEnabled };
+    }));
 
   } catch (err) {
     console.error(`Failed to list containers: ${err.message}`);
@@ -244,6 +256,80 @@ ipcMain.handle('container-stop', async (event, name) => {
   } catch(err) {
     throw new Error(`Failed to stop container "${sanitizedName}": ${err.message}`);
   }
+});
+
+ipcMain.handle('container-autostart-enable', async (event, name) => {
+  const sanitizedName = String(name).replace(/[^a-zA-Z0-9-_\.]/g, '');
+  if (!sanitizedName) {
+    throw new Error('Invalid container name provided.');
+  }
+  if (!await commandExists('podman')) {
+    throw new Error('Autostart requires Podman to generate systemd service files.');
+  }
+  
+  const systemdUserPath = path.join(os.homedir(), '.config', 'systemd', 'user');
+  await fs.mkdir(systemdUserPath, { recursive: true });
+
+  const serviceFileName = `container-${sanitizedName}.service`;
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'distrobear-'));
+
+  try {
+    // Podman generates the file in the current working directory, so we need to
+    // execute it from inside our temporary directory.
+    const spawnOpts = { cwd: tempDir };
+    // We can't use runCommand here because it doesn't support changing cwd.
+    // Instead, we build a similar promise-based wrapper for spawn.
+    await new Promise((resolve, reject) => {
+        const podmanCmd = spawn(
+          '/bin/bash', 
+          ['-l', '-c', `podman generate systemd --new --files --name '${sanitizedName}'`], 
+          spawnOpts
+        );
+        let stderr = '';
+        podmanCmd.stderr.on('data', (data) => { stderr += data.toString(); });
+        podmanCmd.on('close', (code) => {
+            if (code !== 0) reject(new Error(stderr || `Podman command failed with code ${code}`));
+            else resolve();
+        });
+        podmanCmd.on('error', reject);
+    });
+
+    const tempServicePath = path.join(tempDir, serviceFileName);
+    const finalServicePath = path.join(systemdUserPath, serviceFileName);
+
+    await fs.rename(tempServicePath, finalServicePath);
+    await runCommand('systemctl', ['--user', 'daemon-reload']);
+    await runCommand('systemctl', ['--user', 'enable', serviceFileName]);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+ipcMain.handle('container-autostart-disable', async (event, name) => {
+  const sanitizedName = String(name).replace(/[^a-zA-Z0-9-_\.]/g, '');
+  if (!sanitizedName) {
+    throw new Error('Invalid container name provided.');
+  }
+  
+  const systemdUserPath = path.join(os.homedir(), '.config', 'systemd', 'user');
+  const serviceFileName = `container-${sanitizedName}.service`;
+  const serviceFilePath = path.join(systemdUserPath, serviceFileName);
+  
+  try {
+    await runCommand('systemctl', ['--user', 'disable', serviceFileName]);
+  } catch (err) {
+    console.warn(`Could not disable systemd service (might not exist): ${err.message}`);
+  }
+  
+  try {
+    await fs.unlink(serviceFilePath);
+  } catch (err) {
+    if (err.code !== 'ENOENT') { // Ignore "file not found" errors
+      console.warn(`Could not delete systemd service file: ${err.message}`);
+    }
+  }
+  
+  await runCommand('systemctl', ['--user', 'daemon-reload']);
 });
 
 
