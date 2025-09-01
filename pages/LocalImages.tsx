@@ -1,9 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { LocalImage } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
-import DistroLogo from '../components/DistroLogo';
 
 // --- Local Components for LocalImages Page ---
+
+const stringToHslColor = (str: string, s: number, l: number) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const h = hash % 360;
+    return `hsl(${h}, ${s}%, ${l}%)`;
+};
 
 const ConfirmationModal: React.FC<{
   isOpen: boolean;
@@ -108,7 +116,12 @@ const ImageRow: React.FC<{
         className="grid grid-cols-12 items-center p-4 border-b border-primary-light transition-colors duration-200 hover:bg-primary-light/50 gap-4"
       >
         <div className="col-span-12 md:col-span-5 min-w-0 flex items-center gap-3">
-          <DistroLogo imageName={image.repository} className="text-4xl" />
+          <div className="w-10 h-10 flex-shrink-0" style={{ color: stringToHslColor(image.repository, 70, 50) }}>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+                  <title>{image.repository}</title>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 8.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25v2.25A2.25 2.25 0 018.25 20.25H6a2.25 2.25 0 01-2.25-2.25v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25A2.25 2.25 0 0113.5 8.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25v2.25A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+              </svg>
+          </div>
           <div className="min-w-0">
             <p className="font-bold text-gray-100 truncate" title={imageIdentifier}>{image.repository}:{image.tag}</p>
             <p className="text-xs text-gray-400 mt-1 truncate" title={image.id}>ID: {image.id.substring(0, 12)}</p>
@@ -340,7 +353,7 @@ const ArrowDownOnSquareIcon: React.FC = () => (
 );
 const TrashIcon: React.FC = () => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.134-2.036-2.134H8.716c-1.126 0-2.036.954-2.036 2.134v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 4.8.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.134-2.036-2.134H8.716c-1.126 0-2.036.954-2.036 2.134v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
     </svg>
 );
 
