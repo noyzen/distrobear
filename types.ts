@@ -32,7 +32,6 @@ export interface ContainerInfo {
   home_dir: string;
   hostname: string;
   user_name: string;
-  user_shell: string;
   
   // Configuration Flags
   init: boolean;

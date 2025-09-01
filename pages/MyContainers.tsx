@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import ReactDOM from 'react-dom';
 import type { Container, Page, ContainerInfo } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -32,25 +33,92 @@ const ContainerInfoModal: React.FC<{
     }
   }, [isOpen, containerName]);
   
-  const DetailItem: React.FC<{label: string, value: React.ReactNode, isCode?: boolean, fullWidth?: boolean}> = ({ label, value, isCode, fullWidth }) => (
-    <div className={`py-2 ${fullWidth ? 'col-span-1 md:col-span-2' : ''}`}>
+  const DetailItem: React.FC<{label: string, value: React.ReactNode, isCode?: boolean}> = ({ label, value, isCode }) => (
+    <div className="py-2">
         <div className="text-sm font-medium text-gray-400">{label}</div>
         <div className={`text-sm text-gray-200 break-words ${isCode ? 'font-mono' : ''}`}>{value || 'N/A'}</div>
     </div>
 );
 
-  const BooleanPill: React.FC<{value: boolean}> = ({value}) => (
-    <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${value ? 'bg-accent/20 text-accent' : 'bg-gray-600/50 text-gray-300'}`}>
-        {value ? 'Yes' : 'No'}
-    </span>
+  const BooleanPill: React.FC<{value: boolean, label: string}> = ({value, label}) => (
+    <div className="flex items-center justify-between py-2">
+        <div className="text-sm font-medium text-gray-400">{label}</div>
+        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${value ? 'bg-accent/20 text-accent' : 'bg-gray-600/50 text-gray-300'}`}>
+            {value ? 'Enabled' : 'Disabled'}
+        </span>
+    </div>
   );
 
-  if (!isOpen) return null;
+  const modalRoot = document.getElementById('modal-root');
 
-  return (
+  if (!isOpen || !modalRoot) return null;
+
+  const renderContent = () => {
+    if (isLoading) {
+        return <p className="text-center text-gray-400 animate-pulse p-8">Loading details...</p>;
+    }
+    if (error) {
+        return (
+            <div className="p-4 m-6 bg-red-900/50 text-red-300 text-sm rounded-md border border-red-700/50">
+                <p className="font-sans font-bold mb-1">Failed to load info</p>
+                <pre className="whitespace-pre-wrap break-words font-mono">{error}</pre>
+            </div>
+        );
+    }
+    if (info) {
+        return (
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                {/* Left Column */}
+                <div className="space-y-4">
+                    <section>
+                        <h3 className="text-lg font-semibold text-gray-300 border-b border-primary pb-2 mb-2">Overview</h3>
+                        <DetailItem label="ID" value={info.id} isCode />
+                        <DetailItem label="Status" value={info.status} />
+                        <DetailItem label="Backend" value={info.backend} isCode />
+                        <DetailItem label="PID" value={info.pid > 0 ? info.pid : 'N/A'} />
+                        <DetailItem label="Created" value={new Date(info.created).toLocaleString()} />
+                        <DetailItem label="Size" value={info.size} />
+                    </section>
+                     <section>
+                        <h3 className="text-lg font-semibold text-gray-300 border-b border-primary pb-2 mb-2">Configuration</h3>
+                        <BooleanPill label="Init Process" value={info.init} />
+                        <BooleanPill label="Root Mode" value={info.root} />
+                        <BooleanPill label="NVIDIA Runtime" value={info.nvidia} />
+                    </section>
+                </div>
+                {/* Right Column */}
+                <div className="space-y-4">
+                    <section>
+                        <h3 className="text-lg font-semibold text-gray-300 border-b border-primary pb-2 mb-2">Image & User</h3>
+                        <DetailItem label="Image" value={info.image} isCode />
+                        <DetailItem label="Entrypoint" value={info.entrypoint} isCode />
+                        <DetailItem label="User" value={info.user_name} isCode />
+                        <DetailItem label="Hostname" value={info.hostname} isCode />
+                        <DetailItem label="Home Directory (in Container)" value={info.home_dir} isCode />
+                    </section>
+                    <section>
+                        <h3 className="text-lg font-semibold text-gray-300 border-b border-primary pb-2 mb-2">Mounted Volumes</h3>
+                         <div className="text-xs text-gray-200 font-mono bg-primary-dark/50 rounded-lg p-3 h-40 overflow-y-auto">
+                            {info.volumes && info.volumes.length > 0 ? (
+                                <ul className="space-y-1">
+                                    {info.volumes.map((vol, i) => <li key={i}>{vol}</li>)}
+                                </ul>
+                            ) : (
+                                <p className="text-gray-500 normal-case">No custom volumes mounted.</p>
+                            )}
+                        </div>
+                    </section>
+                </div>
+            </div>
+        );
+    }
+    return null;
+  }
+  
+  return ReactDOM.createPortal(
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <motion.div
-        className="bg-primary-light rounded-lg shadow-xl w-full max-w-3xl border border-primary flex flex-col"
+        className="bg-primary-light rounded-lg shadow-xl w-full max-w-4xl border border-primary flex flex-col"
         style={{ maxHeight: '90vh' }}
         onClick={e => e.stopPropagation()}
         initial={{ opacity: 0, scale: 0.9 }}
@@ -63,71 +131,8 @@ const ContainerInfoModal: React.FC<{
             </h2>
         </header>
         
-        <main className="p-6 overflow-y-auto">
-          {isLoading && <p className="text-center text-gray-400 animate-pulse">Loading details...</p>}
-          {error && <div className="p-3 bg-red-900/50 text-red-300 text-sm rounded-md border border-red-700/50">
-                <p className="font-sans font-bold mb-1">Failed to load info</p>
-                <pre className="whitespace-pre-wrap break-words font-mono">{error}</pre>
-            </div>}
-          
-          {info && (
-            <div className="space-y-6">
-                <div>
-                    <h3 className="text-lg font-semibold text-gray-300 mb-2 border-b border-primary pb-2">Overview</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                        <DetailItem label="ID" value={info.id} isCode />
-                        <DetailItem label="Backend" value={info.backend} isCode />
-                        <DetailItem label="Status" value={info.status} />
-                        <DetailItem label="PID" value={info.pid > 0 ? info.pid : 'N/A'} />
-                        <DetailItem label="Created" value={new Date(info.created).toLocaleString()} />
-                        <DetailItem label="Size" value={info.size} />
-                    </div>
-                </div>
-
-                <div>
-                    <h3 className="text-lg font-semibold text-gray-300 mt-4 mb-2 border-b border-primary pb-2">Image &amp; User</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                        <DetailItem label="Image" value={info.image} isCode fullWidth/>
-                        <DetailItem label="Entrypoint" value={info.entrypoint} isCode fullWidth/>
-                        <DetailItem label="User Name" value={info.user_name} isCode />
-                        <DetailItem label="User Shell" value={info.user_shell} isCode />
-                        <DetailItem label="Home Directory" value={info.home_dir} isCode />
-                        <DetailItem label="Hostname" value={info.hostname} isCode />
-                    </div>
-                </div>
-
-                <div>
-                    <h3 className="text-lg font-semibold text-gray-300 mt-4 mb-2 border-b border-primary pb-2">Configuration Flags</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-3 py-2">
-                        <div className="flex flex-col">
-                            <dt className="text-sm font-medium text-gray-400 mb-1">Init Process</dt>
-                            <dd><BooleanPill value={info.init} /></dd>
-                        </div>
-                        <div className="flex flex-col">
-                            <dt className="text-sm font-medium text-gray-400 mb-1">Root Mode</dt>
-                            <dd><BooleanPill value={info.root} /></dd>
-                        </div>
-                        <div className="flex flex-col">
-                            <dt className="text-sm font-medium text-gray-400 mb-1">NVIDIA Runtime</dt>
-                            <dd><BooleanPill value={info.nvidia} /></dd>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 className="text-lg font-semibold text-gray-300 mt-4 mb-2">Mounted Volumes &amp; Binds</h3>
-                    <div className="text-xs text-gray-200 font-mono bg-primary-dark/50 rounded-lg p-3 max-h-48 overflow-y-auto">
-                        {info.volumes && info.volumes.length > 0 ? (
-                            <ul className="space-y-1">
-                                {info.volumes.map((vol, i) => <li key={i}>{vol}</li>)}
-                            </ul>
-                        ) : (
-                            <p className="text-gray-500 normal-case">No custom volumes mounted.</p>
-                        )}
-                    </div>
-                </div>
-            </div>
-          )}
+        <main className="overflow-y-auto">
+            {renderContent()}
         </main>
 
         <footer className="p-4 border-t border-primary flex justify-end flex-shrink-0">
@@ -139,7 +144,8 @@ const ContainerInfoModal: React.FC<{
           </button>
         </footer>
       </motion.div>
-    </div>
+    </div>,
+    modalRoot
   );
 };
 
@@ -349,21 +355,7 @@ const LightningBoltIcon: React.FC<{ className?: string; title?: string; }> = ({ 
 const ShieldIcon: React.FC<{ className?: string; title?: string; }> = ({ className, title }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className}>
     {title && <title>{title}</title>}
-    <path fillRule="evenodd" d="M10 1.5c.386 0 .762.043 1.128.123 1.48-.022 2.923.433 4.093 1.417.21.173.41.358.598.554A1 1 0 0117 4.82v4.434c0 1.4-.413 2.76-1.18 3.963-.923 1.45-2.3 2.53-3.955 3.162-.255.099-.516.186-.78.258a1 1 0 01-.17 0c-.264-.072-.525-.159-.78-.258-1.656-.632-3.032-1.712-3.955-3.162C4.413 11.983 4 10.654 4 9.254V4.82a1 1 0 011.18-1.222c.188-.196.388-.381.598-.554C6.95 1.956 8.392 1.5 9.872 1.523A4.89 4.89 0 0110 1.5zm.354 4.354a.5.5 0 00-.708 0L7.5 8.004l-.854-.854a.5.5 0 10-.708.708L7.146 8.36l-.853.854a.5.5 0 00.708.708L7.5 8.707l.854.853a.5.5 0 00.708-.708L8.207 8.36l.853-.853a.5.5 0 000-.707l-.353-.353z" clipRule="evenodd" />
-    <path d="M10 2.5a7.5 7.5 0 100 15 7.5 7.5 0 000-15zM8.354 5.854a.5.5 0 000 .708L9.646 8l-1.292 1.293a.5.5 0 00.708.708L10 8.707l1.293 1.293a.5.5 0 00.708-.708L10.707 8l1.293-1.293a.5.5 0 00-.708-.708L10 7.293 8.646 5.854a.5.5 0 00-.293-.147z" />
-     <path d="M10 1a9 9 0 100 18 9 9 0 000-18zM5.47 5.47a.75.75 0 011.06 0L10 8.94l3.47-3.47a.75.75 0 111.06 1.06L11.06 10l3.47 3.47a.75.75 0 11-1.06 1.06L10 11.06l-3.47 3.47a.75.75 0 01-1.06-1.06L8.94 10 5.47 6.53a.75.75 0 010-1.06z" />
-     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-     <path fillRule="evenodd" d="M10 1a9 9 0 100 18 9 9 0 000-18zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-    <path fillRule="evenodd" d="M10,1.5a8.5,8.5,0,1,0,8.5,8.5A8.5,8.5,0,0,0,10,1.5Zm0,15.16A6.66,6.66,0,1,1,16.66,10,6.67,6.67,0,0,1,10,16.66Z" />
-    <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm0 18a8.5 8.5 0 1 1 8.5-8.5A8.51 8.51 0 0 1 10 18.5Z"/>
-    <path fillRule="evenodd" d="M10 1.5A8.5 8.5 0 1018.5 10 8.5 8.5 0 0010 1.5zM5.03 5.03a.75.75 0 011.06 0L10 8.94l3.91-3.91a.75.75 0 111.06 1.06L11.06 10l3.91 3.91a.75.75 0 11-1.06 1.06L10 11.06l-3.91 3.91a.75.75 0 01-1.06-1.06L8.94 10 5.03 6.09a.75.75 0 010-1.06z" clipRule="evenodd" />
-    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4 10a6 6 0 1112 0 6 6 0 01-12 0z" clipRule="evenodd" />
-    <path fillRule="evenodd" d="M10 1.5c-4.69 0-8.5 3.81-8.5 8.5s3.81 8.5 8.5 8.5 8.5-3.81 8.5-8.5-3.81-8.5-8.5-8.5zM12 10a2 2 0 11-4 0 2 2 0 014 0z" clipRule="evenodd" />
-    <path d="M10,1.5A8.5,8.5,0,1,0,18.5,10,8.5,8.5,0,0,0,10,1.5Zm0,15A6.5,6.5,0,1,1,16.5,10,6.5,6.5,0,0,1,10,16.5Z"/><path d="M10,5a5,5,0,1,0,5,5,5,5,0,0,0-5-5Zm0,8a3,3,0,1,1,3-3,3,3,0,0,1-3,3Z"/>
-    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.707-10.293a1 1 0 00-1.414 0L6 11.006V10a1 1 0 10-2 0v2a1 1 0 001 1h2a1 1 0 100-2H8.414l3.293-3.293a1 1 0 000-1.414z" clipRule="evenodd" />
-    <path d="M10,1.5c-4.694,0-8.5,3.806-8.5,8.5s3.806,8.5,8.5,8.5,8.5-3.806,8.5-8.5S14.694,1.5,10,1.5Zm0,15c-3.584,0-6.5-2.916-6.5-6.5S6.416,3.5,10,3.5,16.5,6.416,16.5,10,13.584,16.5,10,16.5Z"/><path d="M10,5.5a4.5,4.5,0,1,0,4.5,4.5A4.5,4.5,0,0,0,10,5.5Zm0,7A2.5,2.5,0,1,1,12.5,10,2.5,2.5,0,0,1,10,12.5Z"/>
-     <path fillRule="evenodd" d="M10 1a9 9 0 100 18 9 9 0 000-18zM9 5a1 1 0 112 0v2.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414L9 7.586V5zm1 7a1 1 0 100 2h.01a1 1 0 100-2H10z" clipRule="evenodd" />
-     <path fillRule="evenodd" d="M10 1.5c.386 0 .762.043 1.128.123 1.48-.022 2.923.433 4.093 1.417.21.173.41.358.598.554A1 1 0 0117 4.82v4.434c0 1.4-.413 2.76-1.18 3.963-.923 1.45-2.3 2.53-3.955 3.162-.255.099-.516.186-.78.258a1 1 0 01-.17 0c-.264-.072-.525-.159-.78-.258-1.656-.632-3.032-1.712-3.955-3.162C4.413 11.983 4 10.654 4 9.254V4.82a1 1 0 011.18-1.222c.188-.196.388-.381.598-.554C6.95 1.956 8.392 1.5 9.872 1.523A4.89 4.89 0 0110 1.5z" clipRule="evenodd" />
+    <path fillRule="evenodd" d="M10 1.5c.386 0 .762.043 1.128.123 1.48-.022 2.923.433 4.093 1.417.21.173.41.358.598.554A1 1 0 0117 4.82v4.434c0 1.4-.413 2.76-1.18 3.963-.923 1.45-2.3 2.53-3.955 3.162-.255.099-.516.186-.78.258a1 1 0 01-.17 0c-.264-.072-.525-.159-.78-.258-1.656-.632-3.032-1.712-3.955-3.162C4.413 11.983 4 10.654 4 9.254V4.82a1 1 0 011.18-1.222c.188-.196.388-.381.598-.554C6.95 1.956 8.392 1.5 9.872 1.523A4.89 4.89 0 0110 1.5z" clipRule="evenodd" />
   </svg>
 );
 

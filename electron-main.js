@@ -642,7 +642,6 @@ ipcMain.handle('container-info', async (event, name) => {
 
         home_dir: home_dir,
         user_name: inspectData.Config.User || 'N/A',
-        user_shell: 'N/A (cannot be determined reliably)',
         hostname: inspectData.Config.Hostname || 'N/A',
         
         init: !!inspectData.HostConfig.Init,
