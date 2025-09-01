@@ -574,6 +574,19 @@ ipcMain.handle('container-commit', async (event, name, imageName, imageTag) => {
   }
 });
 
+ipcMain.handle('container-info', async (event, name) => {
+  const sanitizedName = String(name).replace(/[^a-zA-Z0-9-_\.]/g, '');
+  if (!sanitizedName) {
+    throw new Error('Invalid container name provided.');
+  }
+  try {
+    const output = await runCommand('distrobox', ['info', '--name', sanitizedName, '--json']);
+    return JSON.parse(output);
+  } catch (err) {
+    throw new Error(`Failed to get info for container "${sanitizedName}". This might mean your distrobox version is too old to support JSON output. Error: ${err.message}`);
+  }
+});
+
 ipcMain.on('window-minimize', () => BrowserWindow.getFocusedWindow()?.minimize());
 ipcMain.on('window-maximize', () => {
   const window = BrowserWindow.getFocusedWindow();

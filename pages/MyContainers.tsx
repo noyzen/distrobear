@@ -1,8 +1,121 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import type { Container, Page } from '../types';
+import type { Container, Page, ContainerInfo } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // --- Local Components for MyContainers Page ---
+
+const ContainerInfoModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  containerName: string;
+}> = ({ isOpen, onClose, containerName }) => {
+  const [info, setInfo] = useState<ContainerInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      const fetchInfo = async () => {
+        setIsLoading(true);
+        setError(null);
+        setInfo(null);
+        try {
+          const result = await window.electronAPI.containerInfo(containerName);
+          setInfo(result);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "An unknown error occurred.");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchInfo();
+    }
+  }, [isOpen, containerName]);
+
+  const InfoRow: React.FC<{ label: string; children: React.ReactNode; isCode?: boolean }> = ({ label, children, isCode = false }) => (
+    <div className="grid grid-cols-3 gap-4 py-3 border-b border-primary">
+      <dt className="text-sm font-medium text-gray-400 break-words">{label}</dt>
+      <dd className={`col-span-2 text-sm text-gray-200 break-words ${isCode ? 'font-mono' : ''}`}>
+        {children}
+      </dd>
+    </div>
+  );
+  
+  const BooleanPill: React.FC<{value: boolean}> = ({value}) => (
+    <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${value ? 'bg-accent/20 text-accent' : 'bg-gray-600/50 text-gray-300'}`}>
+        {value ? 'Yes' : 'No'}
+    </span>
+  );
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <motion.div
+        className="bg-primary-light rounded-lg shadow-xl w-full max-w-3xl border border-primary flex flex-col"
+        style={{ maxHeight: '90vh' }}
+        onClick={e => e.stopPropagation()}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+      >
+        <header className="p-4 border-b border-primary flex-shrink-0">
+            <h2 className="text-xl font-bold text-gray-100">
+                Container Info: <span className="text-accent">{containerName}</span>
+            </h2>
+        </header>
+        
+        <main className="p-6 overflow-y-auto">
+          {isLoading && <p className="text-center text-gray-400 animate-pulse">Loading details...</p>}
+          {error && <div className="p-3 bg-red-900/50 text-red-300 text-sm rounded-md border border-red-700/50">
+                <p className="font-sans font-bold mb-1">Failed to load info</p>
+                <pre className="whitespace-pre-wrap break-words font-mono">{error}</pre>
+            </div>}
+          
+          {info && (
+            <dl>
+                <InfoRow label="ID" isCode>{info.id}</InfoRow>
+                <InfoRow label="Image" isCode>{info.image}</InfoRow>
+                <InfoRow label="Status">{info.status}</InfoRow>
+                <InfoRow label="Home Directory" isCode>{info.home_dir}</InfoRow>
+                <InfoRow label="Entrypoint" isCode>{info.entrypoint}</InfoRow>
+                <InfoRow label="User Shell" isCode>{info.user_shell}</InfoRow>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                    <InfoRow label="Init Process"><BooleanPill value={info.init} /></InfoRow>
+                    <InfoRow label="Root Mode"><BooleanPill value={info.root} /></InfoRow>
+                    <InfoRow label="NVIDIA Runtime"><BooleanPill value={info.nvidia} /></InfoRow>
+                    <InfoRow label="Pull on Create"><BooleanPill value={info.pull} /></InfoRow>
+                </div>
+
+                <div className="py-3 mt-2">
+                    <dt className="text-sm font-medium text-gray-400 mb-2">Mounted Volumes</dt>
+                    <dd className="text-sm text-gray-200 font-mono bg-primary-dark/50 rounded-lg p-3">
+                        {info.volumes && info.volumes.length > 0 ? (
+                            <ul className="space-y-1 list-disc list-inside">
+                                {info.volumes.map((vol, i) => <li key={i}>{vol}</li>)}
+                            </ul>
+                        ) : (
+                            <p className="text-gray-500">No custom volumes mounted.</p>
+                        )}
+                    </dd>
+                </div>
+            </dl>
+          )}
+        </main>
+
+        <footer className="p-4 border-t border-primary flex justify-end flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="px-6 py-2 bg-primary text-gray-200 font-semibold rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            Close
+          </button>
+        </footer>
+      </motion.div>
+    </div>
+  );
+};
 
 const SaveImageModal: React.FC<{
   isOpen: boolean;
@@ -213,6 +326,12 @@ const TerminalIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+const InformationCircleIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+    </svg>
+);
+
 const ToggleSwitch: React.FC<{ isOn: boolean; onToggle: () => void; disabled?: boolean; }> = ({ isOn, onToggle, disabled }) => {
   return (
     <button
@@ -245,6 +364,7 @@ const ContainerRow: React.FC<{
   const [actionError, setActionError] = useState<string | null>(null);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isSaveImageModalOpen, setSaveImageModalOpen] = useState(false);
+  const [isInfoModalOpen, setInfoModalOpen] = useState(false);
 
   // Optimistic state for the autostart toggle
   const [optimisticAutostartEnabled, setOptimisticAutostartEnabled] = useState(container.isAutostartEnabled);
@@ -380,7 +500,7 @@ const ContainerRow: React.FC<{
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4 space-y-4 divide-y divide-primary-light">
-                <div className="flex items-center justify-center pt-2 gap-4">
+                <div className="flex flex-wrap items-center justify-center pt-2 gap-4">
                     {isUp ? (
                         <ActionButton onClick={(e) => handleActionClick(e, 'stop')} disabled={isActionInProgress} isStopButton>
                         {isActionInProgress ? '...' : 'Stop'}
@@ -398,6 +518,14 @@ const ContainerRow: React.FC<{
                     >
                         <TerminalIcon className="w-4 h-4" />
                         Enter
+                    </button>
+                    <button
+                        onClick={() => setInfoModalOpen(true)}
+                        className="w-28 flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-primary-light text-gray-200 hover:bg-gray-500"
+                        title="Show detailed container information"
+                    >
+                        <InformationCircleIcon className="w-4 h-4" />
+                        Info
                     </button>
                 </div>
 
@@ -478,6 +606,13 @@ const ContainerRow: React.FC<{
                 isOpen={isSaveImageModalOpen}
                 onClose={() => setSaveImageModalOpen(false)}
                 onSave={handleSaveImage}
+                containerName={container.name}
+            />
+        )}
+        {isInfoModalOpen && (
+            <ContainerInfoModal
+                isOpen={isInfoModalOpen}
+                onClose={() => setInfoModalOpen(false)}
                 containerName={container.name}
             />
         )}

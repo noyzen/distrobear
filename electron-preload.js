@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   containerAutostartDisable: (name) => ipcRenderer.invoke('container-autostart-disable', name),
   containerDelete: (name) => ipcRenderer.invoke('container-delete', name),
   containerCommit: (name, imageName, imageTag) => ipcRenderer.invoke('container-commit', name, imageName, imageTag),
+  containerInfo: (name) => ipcRenderer.invoke('container-info', name),
   containerEnter: (name) => ipcRenderer.invoke('container-enter', name),
   // System Info
   getTerminal: () => ipcRenderer.invoke('get-terminal'),
