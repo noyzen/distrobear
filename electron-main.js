@@ -580,95 +580,98 @@ ipcMain.handle('container-info', async (event, name) => {
     throw new Error('Invalid container name provided.');
   }
   try {
-    // We will parse the text output for better compatibility with older distrobox versions
-    // that may not support the --json flag.
-    const output = await runCommand('distrobox', ['info', '--name', sanitizedName]);
-    
-    // The type definition for ContainerInfo, used as a template to ensure we return a valid object.
-    const info = {
-        additional_flags: null,
-        entrypoint: '',
-        home_dir: '',
-        hostname: '',
-        id: '',
-        image: '',
-        init: false,
-        init_path: '',
-        name: sanitizedName,
-        nvidia: false,
-        pull: false,
-        replace: false,
-        root: false,
-        start_now: false,
-        status: '',
-        user_name: '',
-        user_shell: '',
-        volumes: [],
-    };
-    
-    const lines = output.split('\n');
-    let parsingVolumes = false;
+    const usePodman = await commandExists('podman');
+    const useDocker = await commandExists('docker');
+    let backendCmd, backendName;
 
-    // Mapping from text label to JSON key and type for robust parsing.
-    const keyMap = {
-      'ID': { key: 'id', type: 'string' },
-      'Name': { key: 'name', type: 'string' },
-      'Status': { key: 'status', type: 'string' },
-      'Image': { key: 'image', type: 'string' },
-      'Entrypoint': { key: 'entrypoint', type: 'string' },
-      'Init': { key: 'init', type: 'boolean' },
-      'Init path': { key: 'init_path', type: 'string' },
-      'User name': { key: 'user_name', type: 'string' },
-      'User shell': { key: 'user_shell', type: 'string' },
-      'Home dir': { key: 'home_dir', type: 'string' },
-      'Hostname': { key: 'hostname', type: 'string' },
-      'Nvidia': { key: 'nvidia', type: 'boolean' },
-      'Pull': { key: 'pull', type: 'boolean' },
-      'Root': { key: 'root', type: 'boolean' },
-      'Replace': { key: 'replace', type: 'boolean' },
-      'Start now': { key: 'start_now', type: 'boolean' },
-      'Additional Flags': { key: 'additional_flags', type: 'string' },
-    };
+    if (usePodman) {
+      backendCmd = 'podman';
+      backendName = 'podman';
+    } else if (useDocker) {
+      backendCmd = 'docker';
+      backendName = 'docker';
+    } else {
+      throw new Error('No container runtime (Podman or Docker) found.');
+    }
 
-    for (const line of lines) {
-        if (line.trim().startsWith('Volumes:')) {
-            parsingVolumes = true;
-            continue;
-        }
+    // 1. Get detailed info from the container backend
+    const inspectOutput = await runCommand(backendCmd, ['inspect', sanitizedName]);
+    if (!inspectOutput) throw new Error(`Container "${sanitizedName}" not found by ${backendName}.`);
+    const inspectData = JSON.parse(inspectOutput)[0]; // inspect returns an array
 
-        if (parsingVolumes) {
-            // Indented lines are volume paths.
-            if (line.trim() && /^\s+/.test(line)) {
-                info.volumes.push(line.trim());
-                continue; // Skip to next line after processing volume
-            } else {
-                // A non-indented line means the volumes section has ended.
-                parsingVolumes = false;
-            }
-        }
+    // 2. Get container size using its unique ID for accuracy
+    const sizeOutput = await runCommand(backendCmd, ['ps', '-a', '--filter', `id=${inspectData.Id}`, '--format', '{{.Size}}']);
 
-        // Regular key-value parsing for all other lines.
-        const parts = line.split(/:\s+/);
-        if (parts.length < 2) continue; // Skip lines that aren't key-value pairs.
+    // 3. Get Distrobox-specific info to supplement backend data
+    const distroboxInfoOutput = await runCommand('distrobox', ['info', '--name', sanitizedName]);
 
-        const key = parts[0].trim();
-        const valueStr = parts.slice(1).join(': ').trim();
-        
-        const mapping = keyMap[key];
-        if (mapping) {
-            if (mapping.type === 'boolean') {
-                info[mapping.key] = valueStr.toLowerCase() === 'true';
-            } else {
-                if (mapping.key === 'additional_flags' && (valueStr === '(null)' || valueStr === '')) {
-                    info[mapping.key] = null;
-                } else {
-                    info[mapping.key] = valueStr;
+    // 4. Parse and combine all data
+    const parseDistroboxInfo = (text) => {
+        const info = {};
+        const lines = text.split('\n');
+        const keyMap = {
+          'Home dir': 'home_dir',
+          'User name': 'user_name',
+          'User shell': 'user_shell',
+          'Hostname': 'hostname',
+          'Nvidia': 'nvidia', // boolean
+          'Init': 'init_distrobox', // boolean, to not conflict with inspect
+          'Root': 'root', // boolean
+          'Additional Flags': 'additional_flags',
+        };
+        for (const line of lines) {
+            const parts = line.split(/:\s+/);
+            if (parts.length < 2) continue;
+            const key = parts[0].trim();
+            const valueStr = parts.slice(1).join(': ').trim();
+            if (keyMap[key]) {
+                const mappedKey = keyMap[key];
+                if (['nvidia', 'init_distrobox', 'root'].includes(mappedKey)) {
+                    info[mappedKey] = valueStr.toLowerCase() === 'true';
+                } else if (mappedKey === 'additional_flags' && (valueStr === '(null)' || valueStr === '')) {
+                    info[mappedKey] = null;
+                }
+                else {
+                    info[mappedKey] = valueStr;
                 }
             }
         }
-    }
+        return info;
+    };
     
-    return info;
+    const distroboxData = parseDistroboxInfo(distroboxInfoOutput);
+
+    // Format mounts from inspect data for better readability
+    const formattedVolumes = (inspectData.Mounts || []).map(
+        (mount) => `${mount.Source} -> ${mount.Destination} (${mount.Type}, ${mount.Mode || 'ro'})`
+    );
+
+    const combinedInfo = {
+        id: inspectData.Id.substring(0, 12),
+        name: inspectData.Name.replace(/^\//, ''), // remove leading slash
+        image: inspectData.Config.Image,
+        status: inspectData.State.Status,
+        created: inspectData.Created,
+        pid: inspectData.State.Pid,
+        entrypoint: Array.isArray(inspectData.Config.Entrypoint) ? inspectData.Config.Entrypoint.join(' ') : (inspectData.Config.Entrypoint || 'N/A'),
+        backend: backendName,
+        size: sizeOutput.trim() || 'N/A',
+
+        home_dir: distroboxData.home_dir || 'N/A',
+        user_name: distroboxData.user_name || 'N/A',
+        user_shell: distroboxData.user_shell || 'N/A',
+        hostname: distroboxData.hostname || inspectData.Config.Hostname || 'N/A',
+        
+        // Prefer the more reliable value from 'inspect' if available
+        init: inspectData.HostConfig.Init || distroboxData.init_distrobox || false,
+        nvidia: distroboxData.nvidia || false,
+        root: distroboxData.root || (inspectData.Config.User === 'root') || false,
+        
+        volumes: formattedVolumes,
+        additional_flags: distroboxData.additional_flags || null,
+    };
+    
+    return combinedInfo;
 
   } catch (err) {
     throw new Error(`Failed to get info for container "${sanitizedName}". Error: ${err.message}`);

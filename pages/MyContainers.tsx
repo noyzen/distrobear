@@ -31,16 +31,14 @@ const ContainerInfoModal: React.FC<{
       fetchInfo();
     }
   }, [isOpen, containerName]);
-
-  const InfoRow: React.FC<{ label: string; children: React.ReactNode; isCode?: boolean }> = ({ label, children, isCode = false }) => (
-    <div className="grid grid-cols-3 gap-4 py-3 border-b border-primary">
-      <dt className="text-sm font-medium text-gray-400 break-words">{label}</dt>
-      <dd className={`col-span-2 text-sm text-gray-200 break-words ${isCode ? 'font-mono' : ''}`}>
-        {children}
-      </dd>
-    </div>
-  );
   
+  const DetailItem: React.FC<{label: string, value: React.ReactNode, isCode?: boolean, fullWidth?: boolean}> = ({ label, value, isCode, fullWidth }) => (
+    <div className={`py-2 ${fullWidth ? 'col-span-1 md:col-span-2' : ''}`}>
+        <div className="text-sm font-medium text-gray-400">{label}</div>
+        <div className={`text-sm text-gray-200 break-words ${isCode ? 'font-mono' : ''}`}>{value || 'N/A'}</div>
+    </div>
+);
+
   const BooleanPill: React.FC<{value: boolean}> = ({value}) => (
     <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${value ? 'bg-accent/20 text-accent' : 'bg-gray-600/50 text-gray-300'}`}>
         {value ? 'Yes' : 'No'}
@@ -73,34 +71,63 @@ const ContainerInfoModal: React.FC<{
             </div>}
           
           {info && (
-            <dl>
-                <InfoRow label="ID" isCode>{info.id}</InfoRow>
-                <InfoRow label="Image" isCode>{info.image}</InfoRow>
-                <InfoRow label="Status">{info.status}</InfoRow>
-                <InfoRow label="Home Directory" isCode>{info.home_dir}</InfoRow>
-                <InfoRow label="Entrypoint" isCode>{info.entrypoint}</InfoRow>
-                <InfoRow label="User Shell" isCode>{info.user_shell}</InfoRow>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                    <InfoRow label="Init Process"><BooleanPill value={info.init} /></InfoRow>
-                    <InfoRow label="Root Mode"><BooleanPill value={info.root} /></InfoRow>
-                    <InfoRow label="NVIDIA Runtime"><BooleanPill value={info.nvidia} /></InfoRow>
-                    <InfoRow label="Pull on Create"><BooleanPill value={info.pull} /></InfoRow>
+            <div className="space-y-6">
+                <div>
+                    <h3 className="text-lg font-semibold text-gray-300 mb-2 border-b border-primary pb-2">Overview</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                        <DetailItem label="ID" value={info.id} isCode />
+                        <DetailItem label="Backend" value={info.backend} isCode />
+                        <DetailItem label="Status" value={info.status} />
+                        <DetailItem label="PID" value={info.pid > 0 ? info.pid : 'N/A'} />
+                        <DetailItem label="Created" value={new Date(info.created).toLocaleString()} />
+                        <DetailItem label="Size" value={info.size} />
+                    </div>
                 </div>
 
-                <div className="py-3 mt-2">
-                    <dt className="text-sm font-medium text-gray-400 mb-2">Mounted Volumes</dt>
-                    <dd className="text-sm text-gray-200 font-mono bg-primary-dark/50 rounded-lg p-3">
+                <div>
+                    <h3 className="text-lg font-semibold text-gray-300 mt-4 mb-2 border-b border-primary pb-2">Image &amp; User</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                        <DetailItem label="Image" value={info.image} isCode fullWidth/>
+                        <DetailItem label="Entrypoint" value={info.entrypoint} isCode fullWidth/>
+                        <DetailItem label="User Name" value={info.user_name} isCode />
+                        <DetailItem label="User Shell" value={info.user_shell} isCode />
+                        <DetailItem label="Home Directory" value={info.home_dir} isCode />
+                        <DetailItem label="Hostname" value={info.hostname} isCode />
+                    </div>
+                </div>
+
+                <div>
+                    <h3 className="text-lg font-semibold text-gray-300 mt-4 mb-2 border-b border-primary pb-2">Configuration Flags</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-3 py-2">
+                        <div className="flex flex-col">
+                            <dt className="text-sm font-medium text-gray-400 mb-1">Init Process</dt>
+                            <dd><BooleanPill value={info.init} /></dd>
+                        </div>
+                        <div className="flex flex-col">
+                            <dt className="text-sm font-medium text-gray-400 mb-1">Root Mode</dt>
+                            <dd><BooleanPill value={info.root} /></dd>
+                        </div>
+                        <div className="flex flex-col">
+                            <dt className="text-sm font-medium text-gray-400 mb-1">NVIDIA Runtime</dt>
+                            <dd><BooleanPill value={info.nvidia} /></dd>
+                        </div>
+                    </div>
+                    {info.additional_flags && <DetailItem label="Additional Flags" value={info.additional_flags} isCode fullWidth/>}
+                </div>
+
+                <div>
+                    <h3 className="text-lg font-semibold text-gray-300 mt-4 mb-2">Mounted Volumes &amp; Binds</h3>
+                    <div className="text-xs text-gray-200 font-mono bg-primary-dark/50 rounded-lg p-3 max-h-48 overflow-y-auto">
                         {info.volumes && info.volumes.length > 0 ? (
-                            <ul className="space-y-1 list-disc list-inside">
+                            <ul className="space-y-1">
                                 {info.volumes.map((vol, i) => <li key={i}>{vol}</li>)}
                             </ul>
                         ) : (
-                            <p className="text-gray-500">No custom volumes mounted.</p>
+                            <p className="text-gray-500 normal-case">No custom volumes mounted.</p>
                         )}
-                    </dd>
+                    </div>
                 </div>
-            </dl>
+            </div>
           )}
         </main>
 

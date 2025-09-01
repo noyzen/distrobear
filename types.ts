@@ -15,24 +15,29 @@ export interface Container {
 }
 
 export interface ContainerInfo {
-  additional_flags: string | null;
+  // From container backend (podman/docker inspect)
+  id: string;
+  name: string;
+  image: string;
+  status: string;
+  created: string; // ISO date string
+  pid: number;
   entrypoint: string;
+  backend: string; // 'podman' or 'docker'
+  size: string; // e.g. "1.23GB (virtual 4.56GB)"
+  volumes: string[]; // Formatted as "host_path -> container_path"
+  
+  // From distrobox info
   home_dir: string;
   hostname: string;
-  id: string;
-  image: string;
-  init: boolean;
-  init_path: string;
-  name: string;
-  nvidia: boolean;
-  pull: boolean;
-  replace: boolean;
-  root: boolean;
-  start_now: boolean;
-  status: string;
   user_name: string;
   user_shell: string;
-  volumes: string[];
+  
+  // Configuration Flags
+  init: boolean;
+  nvidia: boolean;
+  root: boolean;
+  additional_flags: string | null;
 }
 
 
