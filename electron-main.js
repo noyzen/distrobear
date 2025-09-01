@@ -667,7 +667,7 @@ ipcMain.handle('container-info', async (event, name) => {
 
 // Application Management IPC handlers
 ipcMain.handle('list-applications', async () => {
-    // 1. Get all containers and their statuses to determine which are running.
+    // 1. Get all containers to determine which are running and which are not.
     const psOutput = await runCommand('podman', ['ps', '-a', '--filter', 'label=manager=distrobox', '--format', '{{.Names}}\t{{.Status}}']).catch(() => '');
     const allContainers = psOutput.split('\n').filter(Boolean).map(line => {
         const [name, status] = line.split('\t');
@@ -680,10 +680,38 @@ ipcMain.handle('list-applications', async () => {
     if (runningContainers.length === 0) {
         return { applications: [], unscannedContainers };
     }
+    
+    // 2. Get all exported app files from the host's application directory.
+    // This is the single source of truth for what is exported.
+    const hostAppDir = path.join(os.homedir(), '.local', 'share', 'applications');
+    let exportedFilesOnHost = [];
+    try {
+        const allFiles = await fs.readdir(hostAppDir);
+        exportedFilesOnHost = allFiles.filter(f => f.startsWith('distrobox-') && f.endsWith('.desktop'));
+    } catch (err) {
+        // This is not a critical error; the directory might not exist yet.
+        console.warn(`Could not read host application directory '${hostAppDir}': ${err.message}`);
+    }
 
-    // 2. Map over ONLY running containers to find all apps in parallel
+    // 3. Map over ONLY running containers to find all apps in parallel
     const allAppsPromises = runningContainers.map(async ({ name: containerName }) => {
+        
+        // From the list of all exported files, create a set of app identifiers
+        // that are exported specifically for the current container.
+        const exportedAppIdentifiers = new Set(
+            exportedFilesOnHost
+                .filter(f => f.endsWith(`-${containerName}.desktop`))
+                .map(f => {
+                    // Extract the app identifier from the filename.
+                    // e.g., "distrobox-audacious-myapps-fedora42.desktop" -> "audacious"
+                    const prefix = 'distrobox-';
+                    const suffix = `-${containerName}.desktop`;
+                    return f.substring(prefix.length, f.length - suffix.length);
+                })
+        );
+        
         try {
+            // Find all .desktop files within the container
             const findCommand = `find /usr/share/applications /usr/local/share/applications ~/.local/share/applications -path '*/.local/share/applications' -prune -o -name "*.desktop" -type f -print 2>/dev/null`;
             const findOutput = await runCommand('distrobox', ['enter', containerName, '--', 'sh', '-c', findCommand]).catch(() => '');
             if (!findOutput) return [];
@@ -694,14 +722,9 @@ ipcMain.handle('list-applications', async () => {
                     const appName = path.basename(desktopFile); // e.g., 'audacious.desktop'
                     const appIdentifier = appName.replace(/\.desktop$/, ''); // e.g., 'audacious'
                     
-                    // NEW: Check for exported file existence on the host. This is the most reliable method.
-                    const hostDesktopFileName = `distrobox-${appIdentifier}-${containerName}.desktop`;
-                    const hostDesktopFilePath = path.join(os.homedir(), '.local', 'share', 'applications', hostDesktopFileName);
+                    // Check if this app identifier exists in our set of known exported apps for this container.
+                    const isExported = exportedAppIdentifiers.has(appIdentifier);
                     
-                    const isExported = await fs.access(hostDesktopFilePath)
-                        .then(() => true) // File exists
-                        .catch(() => false); // File does not exist
-
                     // Get display name
                     const escapedFile = `'${desktopFile.replace(/'/g, "'\\''")}'`;
                     const getNameCommand = `grep -m 1 '^Name' ${escapedFile} | cut -d'=' -f2-`;
@@ -721,7 +744,7 @@ ipcMain.handle('list-applications', async () => {
                         name: displayName.trim(),
                         appName: appName,
                         containerName: containerName,
-                        isExported: isExported, // Use the new reliable check
+                        isExported: isExported,
                     };
                 } catch (e) {
                     console.error(`Error processing desktop file ${desktopFile} in ${containerName}: ${e.message}`);
@@ -739,7 +762,7 @@ ipcMain.handle('list-applications', async () => {
     const nestedApps = await Promise.all(allAppsPromises);
     const applications = nestedApps.flat().sort((a, b) => a.name.localeCompare(b.name));
 
-    // 3. Return the final payload
+    // 4. Return the final payload
     return { applications, unscannedContainers };
 });
 
