@@ -540,6 +540,32 @@ ipcMain.handle('container-delete', async (event, name) => {
   }
 });
 
+ipcMain.handle('container-commit', async (event, name, imageName, imageTag) => {
+  const sanitizedName = String(name).replace(/[^a-zA-Z0-9-_\.]/g, '');
+  if (!sanitizedName) {
+    throw new Error('Invalid container name provided.');
+  }
+  
+  // Image name can have repo/namespace, so slashes are allowed.
+  // Disallow chars that are problematic for shells.
+  const sanitizedImageName = String(imageName).replace(/[`$();|&<>]/g, '');
+  if (!sanitizedImageName) {
+    throw new Error('Invalid image name provided.');
+  }
+
+  // Tag is usually simpler.
+  const sanitizedImageTag = String(imageTag).replace(/[`$();|&<>]/g, '');
+  if (!sanitizedImageTag) {
+    throw new Error('Invalid image tag provided.');
+  }
+  
+  try {
+    return await runCommand('distrobox', ['commit', sanitizedName, '--name', sanitizedImageName, '--tag', sanitizedImageTag]);
+  } catch(err) {
+    throw new Error(`Failed to commit container "${sanitizedName}": ${err.message}`);
+  }
+});
+
 ipcMain.on('window-minimize', () => BrowserWindow.getFocusedWindow()?.minimize());
 ipcMain.on('window-maximize', () => {
   const window = BrowserWindow.getFocusedWindow();

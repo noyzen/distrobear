@@ -4,6 +4,109 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // --- Local Components for MyContainers Page ---
 
+const SaveImageModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (imageName: string, imageTag: string) => Promise<void>;
+  containerName: string;
+}> = ({ isOpen, onClose, onSave, containerName }) => {
+  const [imageName, setImageName] = useState(`${containerName}-snapshot`);
+  const [imageTag, setImageTag] = useState('latest');
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Reset state when modal is opened/closed
+    if (isOpen) {
+      setImageName(`${containerName}-snapshot`);
+      setImageTag('latest');
+      setIsSaving(false);
+      setError(null);
+    }
+  }, [isOpen, containerName]);
+
+  const handleSave = async () => {
+    setError(null);
+    setIsSaving(true);
+    try {
+      await onSave(imageName, imageTag);
+      onClose(); // Close on success
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unknown error occurred.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <motion.div
+        className="bg-primary-light rounded-lg shadow-xl p-6 w-full max-w-lg border border-primary"
+        onClick={e => e.stopPropagation()}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+      >
+        <h2 className="text-2xl font-bold text-gray-100">Save "{containerName}" as Image</h2>
+        <p className="text-gray-400 mt-2 text-sm">This will create a new local image from the container's current state. This image can be used to create new containers.</p>
+        
+        <div className="space-y-4 mt-6">
+          <div>
+            <label htmlFor="imageName" className="block text-sm font-medium text-gray-300 mb-1">Image Name</label>
+            <input
+              type="text"
+              id="imageName"
+              value={imageName}
+              onChange={(e) => setImageName(e.target.value)}
+              placeholder="e.g., my-custom-ubuntu"
+              className="w-full px-3 py-2 bg-primary border border-primary rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/50"
+              disabled={isSaving}
+            />
+          </div>
+          <div>
+            <label htmlFor="imageTag" className="block text-sm font-medium text-gray-300 mb-1">Tag</label>
+            <input
+              type="text"
+              id="imageTag"
+              value={imageTag}
+              onChange={(e) => setImageTag(e.target.value)}
+              placeholder="e.g., latest or v1.2"
+              className="w-full px-3 py-2 bg-primary border border-primary rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/50"
+              disabled={isSaving}
+            />
+          </div>
+        </div>
+
+        {error && (
+            <div className="mt-4 p-3 bg-red-900/50 text-red-300 text-xs rounded-md border border-red-700/50">
+                <p className="font-sans font-bold mb-1">Save Failed</p>
+                <pre className="whitespace-pre-wrap break-words font-mono">{error}</pre>
+            </div>
+        )}
+
+        <div className="flex justify-end gap-4 mt-8">
+          <button
+            onClick={onClose}
+            disabled={isSaving}
+            className="px-6 py-2 bg-primary text-gray-200 font-semibold rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isSaving || !imageName || !imageTag}
+            className="px-6 py-2 bg-accent text-charcoal font-semibold rounded-lg hover:bg-accent-light transition-colors disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
+          >
+            {isSaving ? 'Saving...' : 'Save Image'}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 const ConfirmationModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -141,6 +244,7 @@ const ContainerRow: React.FC<{
   const [isActionInProgress, setIsActionInProgress] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [isSaveImageModalOpen, setSaveImageModalOpen] = useState(false);
 
   // Optimistic state for the autostart toggle
   const [optimisticAutostartEnabled, setOptimisticAutostartEnabled] = useState(container.isAutostartEnabled);
@@ -210,6 +314,21 @@ const ContainerRow: React.FC<{
 
   const handleConfirmDelete = () => {
     performAction('delete');
+  };
+  
+  const handleSaveImage = (imageName: string, imageTag: string) => {
+    // This function is passed to the modal and returns a promise
+    // so the modal can manage its own loading/error state.
+    return new Promise<void>(async (resolve, reject) => {
+        try {
+            await window.electronAPI.containerCommit(container.name, imageName, imageTag);
+            // Future enhancement: show a success toast. For now, just resolve.
+            resolve();
+        } catch (err) {
+            console.error(`Failed to save container as image:`, err);
+            reject(err); // The modal will display this error.
+        }
+    });
   };
 
   return (
@@ -289,6 +408,22 @@ const ContainerRow: React.FC<{
                     </div>
                     <ToggleSwitch isOn={optimisticAutostartEnabled} onToggle={handleAutostartToggle} disabled={isActionInProgress} />
                 </div>
+
+                <div className="pt-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="font-semibold text-gray-200">Export Container</p>
+                            <p className="text-xs text-gray-400">Save current state as a new local image.</p>
+                        </div>
+                        <button
+                            onClick={() => setSaveImageModalOpen(true)}
+                            disabled={isActionInProgress}
+                            className="px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-blue-600 text-white hover:bg-blue-500 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
+                        >
+                            Save as Image
+                        </button>
+                    </div>
+                </div>
                 
                 <div className="pt-4">
                     <div className="flex items-center justify-between">
@@ -330,6 +465,14 @@ const ContainerRow: React.FC<{
                 onConfirm={handleConfirmDelete}
                 title={`Delete "${container.name}"?`}
                 message="Are you sure? All data inside this container will be permanently lost."
+            />
+        )}
+        {isSaveImageModalOpen && (
+            <SaveImageModal
+                isOpen={isSaveImageModalOpen}
+                onClose={() => setSaveImageModalOpen(false)}
+                onSave={handleSaveImage}
+                containerName={container.name}
             />
         )}
       </AnimatePresence>

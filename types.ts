@@ -40,6 +40,7 @@ export interface IElectronAPI {
   containerAutostartDisable: (name: string) => Promise<void>;
   containerEnter: (name: string) => Promise<void>;
   containerDelete: (name: string) => Promise<void>;
+  containerCommit: (name: string, imageName: string, imageTag: string) => Promise<void>;
   getTerminal: () => Promise<string | null>;
 }
 
