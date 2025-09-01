@@ -681,29 +681,52 @@ ipcMain.handle('list-applications', async () => {
         return { applications: [], unscannedContainers };
     }
     
+    // Pre-build a map of exported apps on the host and which container they belong to.
+    // This is the most reliable way to check export status across all distrobox versions.
+    const exportedAppToContainerMap = new Map();
+    const hostAppsPath = path.join(os.homedir(), '.local', 'share', 'applications');
+    try {
+        const hostAppFiles = await fs.readdir(hostAppsPath);
+        const desktopFilesOnHost = hostAppFiles.filter(f => f.endsWith('.desktop'));
+
+        for (const filename of desktopFilesOnHost) {
+            try {
+                const filePath = path.join(hostAppsPath, filename);
+                const content = await fs.readFile(filePath, 'utf-8');
+                // Regex to find 'distrobox enter' and capture the container name.
+                // It handles variations like -n, --name, and optional quotes around the name.
+                const match = content.match(/Exec=.*distrobox enter\s+(?:-n|--name)\s+['"]?([a-zA-Z0-9-_\.]+)['"]?/);
+                if (match && match[1]) {
+                    const containerNameFromHostFile = match[1];
+                    exportedAppToContainerMap.set(filename, containerNameFromHostFile);
+                }
+            } catch (e) {
+                // Ignore errors reading individual files (e.g., permission denied)
+                console.warn(`Could not read or parse host desktop file ${filename}: ${e.message}`);
+            }
+        }
+    } catch (e) {
+        if (e.code !== 'ENOENT') { // Ignore if the directory doesn't exist
+            console.error(`Error reading host applications directory ${hostAppsPath}: ${e.message}`);
+        }
+    }
+
     // 2. Map over ONLY running containers to find all apps in parallel
     const allAppsPromises = runningContainers.map(async ({ name: containerName }) => {
         try {
-            // Step A: Get a list of already exported app identifiers directly from distrobox.
-            // This is the most reliable way to determine export status.
-            const listExportsCmd = ['enter', containerName, '--', 'distrobox-export', '--list-exports'];
-            const listExportsOutput = await runCommand('distrobox', listExportsCmd).catch(() => '');
-            const exportedAppIdentifiers = new Set(listExportsOutput.split('\n').filter(Boolean).map(line => line.trim()));
-
-            // Step B: Find all potential .desktop files within the container.
+            // Find all potential .desktop files within the container.
             const findCommand = `find /usr/share/applications /usr/local/share/applications ~/.local/share/applications -path '*/.local/share/applications' -prune -o -name "*.desktop" -type f -print 2>/dev/null`;
             const findOutput = await runCommand('distrobox', ['enter', containerName, '--', 'sh', '-c', findCommand]).catch(() => '');
             if (!findOutput) return [];
             const desktopFiles = findOutput.split('\n').filter(Boolean);
 
-            // Step C: For each file, get its details and check against our set of exported apps.
+            // For each file, get its details and check against our map of exported apps.
             const appDetailsPromises = desktopFiles.map(async (desktopFile) => {
                 try {
                     const appName = path.basename(desktopFile); // e.g., 'firefox.desktop'
-                    const appIdentifier = appName.replace(/\.desktop$/, ''); // e.g., 'firefox'
 
-                    // Determine if exported by checking the set we created in Step A.
-                    const isExported = exportedAppIdentifiers.has(appIdentifier);
+                    // Determine if exported by checking the map we built.
+                    const isExported = exportedAppToContainerMap.get(appName) === containerName;
                     
                     // Get the display name from inside the container.
                     const escapedFile = `'${desktopFile.replace(/'/g, "'\\''")}'`;
@@ -771,7 +794,7 @@ ipcMain.handle('application-unexport', async (event, { containerName, appName })
   const appIdentifier = sanitizedApp.replace(/\.desktop$/, '');
 
   // The unexport command must also be run from inside the container.
-  const args = ['enter', sanitizedContainer, '--', 'distrobox-export', '--app', appIdentifier, '--unexport'];
+  const args = ['enter', sanitizedContainer, '--', 'distrobox-export', '--app', appIdentifier, '--delete'];
   return await runCommand('distrobox', args);
 });
 
