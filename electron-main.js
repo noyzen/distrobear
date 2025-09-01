@@ -1,11 +1,6 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
-import path from 'path';
-import os from 'os';
-import { fileURLToPath } from 'url';
-
-// In an ES module, __dirname is not available. This is the workaround.
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const { app, BrowserWindow, ipcMain } = require('electron');
+const path = require('path');
+const os = require('os');
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
