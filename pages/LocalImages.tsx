@@ -3,6 +3,20 @@ import type { LocalImage } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import DistroIcon from '../components/DistroLogo';
 
+// --- Animation Variants ---
+const listContainerVariants = {
+  hidden: { opacity: 1 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 }
+  }
+};
+
+const listItemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: { y: 0, opacity: 1 }
+};
+
 // --- Local Components for LocalImages Page ---
 
 const ConfirmationModal: React.FC<{
@@ -41,18 +55,22 @@ const ConfirmationModal: React.FC<{
             </div>
         </div>
         <div className="flex justify-end gap-4 mt-8">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={onClose}
             className="px-6 py-2 bg-primary text-gray-200 font-semibold rounded-lg hover:bg-gray-600 transition-colors"
           >
             Cancel
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => { onConfirm(); onClose(); }}
             className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition-colors flex items-center justify-center gap-2"
           >
             <TrashIcon /> Delete
-          </button>
+          </motion.button>
         </div>
       </motion.div>
     </div>
@@ -107,9 +125,7 @@ const ImageRow: React.FC<{
     <>
       <motion.div
         layout="position"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+        variants={listItemVariants}
         className="grid grid-cols-12 items-center p-4 border-b border-primary-light transition-colors duration-200 hover:bg-primary-light/50 gap-4"
       >
         <div className="col-span-12 md:col-span-5 min-w-0 flex items-center gap-3">
@@ -122,18 +138,22 @@ const ImageRow: React.FC<{
         <div className="col-span-4 md:col-span-2 text-sm text-gray-300">{image.size}</div>
         <div className="col-span-8 md:col-span-2 text-sm text-gray-400">{image.created}</div>
         <div className="col-span-12 md:col-span-3 flex justify-end gap-2">
-            <button 
+            <motion.button 
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
                 onClick={handleExport}
                 disabled={!!isProcessing}
                 className="p-2 text-gray-300 rounded-md hover:bg-blue-600 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Export image to .tar">
                 {isProcessing === 'export' ? <SpinnerIcon className="w-5 h-5"/> : <ArrowUpOnSquareIcon />}
-            </button>
-             <button 
+            </motion.button>
+             <motion.button 
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
                 onClick={() => setDeleteModalOpen(true)}
                 disabled={!!isProcessing}
                 className="p-2 text-gray-300 rounded-md hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Delete image">
                 {isProcessing === 'delete' ? <SpinnerIcon className="w-5 h-5"/> : <TrashIcon />}
-            </button>
+            </motion.button>
         </div>
       </motion.div>
        <AnimatePresence>
@@ -247,7 +267,12 @@ const LocalImages: React.FC = () => {
     }
 
     return (
-      <div className="bg-primary rounded-lg shadow-md">
+      <motion.div 
+        className="bg-primary rounded-lg shadow-md"
+        variants={listContainerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {/* Header Row */}
          <div className="grid grid-cols-12 items-center p-4 border-b-2 border-primary-light gap-4 text-sm font-bold text-gray-400">
              <div className="col-span-12 md:col-span-5">Image Name</div>
@@ -266,7 +291,7 @@ const LocalImages: React.FC = () => {
             />
           ))}
         </AnimatePresence>
-      </div>
+      </motion.div>
     );
   };
 
@@ -290,22 +315,26 @@ const LocalImages: React.FC = () => {
             />
           </div>
            <div className="flex gap-4 w-full sm:w-auto">
-            <button
+            <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleImport}
                 disabled={isLoading || isRefreshing || isImporting}
                 className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-primary-light text-gray-200 font-semibold rounded-lg hover:bg-accent hover:text-charcoal transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 {isImporting ? <SpinnerIcon className="w-5 h-5"/> : <ArrowDownOnSquareIcon />}
                 Import
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => fetchImages(true)}
                 disabled={isLoading || isRefreshing}
                 className="flex-1 sm:flex-none px-5 py-2 bg-accent text-charcoal font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
             >
                 {isRefreshing ? <SpinnerIcon className="w-5 h-5"/> : <ArrowPathIcon />}
                 {isRefreshing ? 'Refreshing...' : 'Refresh'}
-            </button>
+            </motion.button>
           </div>
         </div>
       </header>

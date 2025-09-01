@@ -2,6 +2,20 @@ import React, { useState, useEffect, useMemo } from 'react';
 import type { ExportableApplication, ApplicationList } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const listContainerVariants = {
+  hidden: { opacity: 1 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 }
+  }
+};
+
+const listItemVariants = {
+  hidden: { x: -20, opacity: 0 },
+  visible: { x: 0, opacity: 1 }
+};
+
+
 const ApplicationRow: React.FC<{
   app: ExportableApplication;
   onActionComplete: () => void;
@@ -41,9 +55,7 @@ const ApplicationRow: React.FC<{
   return (
     <motion.div
       layout="position"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      variants={listItemVariants}
       className="flex items-center p-4 border-b border-primary-light transition-colors duration-200 hover:bg-primary-light/50"
     >
       <div className="flex-1 min-w-0">
@@ -58,7 +70,9 @@ const ApplicationRow: React.FC<{
         )}
       </div>
       <div className="flex-shrink-0 ml-4 flex gap-2">
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={handleShare}
           disabled={!!processingAction}
           className="w-28 flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-accent text-charcoal hover:bg-accent-light disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
@@ -69,8 +83,10 @@ const ApplicationRow: React.FC<{
           ) : (
             <><ArrowUpOnSquareIcon /> Share</>
           )}
-        </button>
-        <button
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={handleUnshare}
           disabled={!!processingAction}
           className="w-28 flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-red-600 text-white hover:bg-red-500 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
@@ -81,7 +97,7 @@ const ApplicationRow: React.FC<{
           ) : (
             <><TrashIcon /> Unshare</>
           )}
-        </button>
+        </motion.button>
       </div>
     </motion.div>
   );
@@ -161,7 +177,13 @@ const Applications: React.FC = () => {
     }
 
     return (
-      <motion.div className="bg-primary rounded-lg shadow-md" layout>
+      <motion.div 
+        className="bg-primary rounded-lg shadow-md" 
+        layout
+        variants={listContainerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         <AnimatePresence>
           {filteredApplications.map((app) => (
             <ApplicationRow
@@ -197,14 +219,16 @@ const Applications: React.FC = () => {
               className="w-full pl-10 pr-4 py-2 bg-primary-light border border-primary-light rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/50"
             />
           </div>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => fetchApplications(true)}
             disabled={isLoading || isRefreshing}
             className="w-full sm:w-auto px-5 py-2 bg-accent text-charcoal font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
           >
             {isRefreshing ? <SpinnerIcon /> : <ArrowPathIcon />}
             {isRefreshing ? 'Refreshing...' : 'Refresh'}
-          </button>
+          </motion.button>
         </div>
       </header>
       

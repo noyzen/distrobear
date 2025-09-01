@@ -1,15 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import type { OSInfo, VersionInfo } from '../types';
+import { motion } from 'framer-motion';
 
 interface SystemInfoProps {
   onRerunSetup: () => void;
 }
 
+const listContainerVariants = {
+  hidden: { opacity: 1 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 }
+  }
+};
+
+const listItemVariants = {
+  hidden: { x: -20, opacity: 0 },
+  visible: { x: 0, opacity: 1 }
+};
+
+
 const InfoItem: React.FC<{ label: string; value: string | number }> = ({ label, value }) => (
-  <div className="flex justify-between items-center bg-primary-light p-4 rounded-lg">
+  <motion.div variants={listItemVariants} className="flex justify-between items-center bg-primary-light p-4 rounded-lg">
     <span className="font-semibold text-gray-300">{label}</span>
     <span className="font-mono text-accent">{value}</span>
-  </div>
+  </motion.div>
 );
 
 const SystemInfo: React.FC<SystemInfoProps> = ({ onRerunSetup }) => {
@@ -65,7 +80,12 @@ const SystemInfo: React.FC<SystemInfoProps> = ({ onRerunSetup }) => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          variants={listContainerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {versionInfo && (
             <>
               <InfoItem label="Distrobox Version" value={versionInfo.distrobox} />
@@ -82,26 +102,30 @@ const SystemInfo: React.FC<SystemInfoProps> = ({ onRerunSetup }) => {
               <InfoItem label="Total Memory" value={formatBytes(osInfo.totalmem)} />
             </>
           )}
-        </div>
+        </motion.div>
 
         <div className="pt-4 flex justify-center">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={fetchSystemInfo}
             disabled={isLoading}
-            className="px-8 py-3 bg-accent text-charcoal font-bold rounded-full hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-accent/50 flex items-center justify-center gap-2"
+            className="px-8 py-3 bg-accent text-charcoal font-bold rounded-full hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-300 transform focus:outline-none focus:ring-4 focus:ring-accent/50 flex items-center justify-center gap-2"
           >
             {isLoading ? 'Loading...' : <><ArrowPathIcon /> Refresh System Info</>}
-          </button>
+          </motion.button>
         </div>
         
         <div className="pt-6 border-t border-primary-light text-center space-y-3">
             <p className="text-sm text-gray-400">Need to reinstall or repair dependencies?</p>
-            <button
+            <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={onRerunSetup}
                 className="px-6 py-2 bg-primary-light text-gray-200 font-semibold rounded-lg hover:bg-accent hover:text-charcoal transition-all duration-200"
             >
                 Run Setup Wizard Manually
-            </button>
+            </motion.button>
         </div>
         
          <div className="pt-6 border-t border-primary-light text-center space-y-4">

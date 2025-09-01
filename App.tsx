@@ -9,6 +9,7 @@ import CreateContainer from './pages/CreateContainer';
 import LocalImages from './pages/LocalImages';
 import DownloadImages from './pages/DownloadImages';
 import type { Page, DependencyCheckResult } from './types';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type AppState = 'checking' | 'setup-required' | 'ready';
 
@@ -85,10 +86,20 @@ const App: React.FC = () => {
                 isOpen={isSidebarOpen}
                 setIsOpen={setSidebarOpen}
               />
-              <main className="flex-1 overflow-y-auto transition-all duration-300">
-                <div className="p-4 md:p-8">
-                  {renderPage()}
-                </div>
+              <main className="flex-1 overflow-y-auto">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentPage}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    <div className="p-4 md:p-8">
+                      {renderPage()}
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
               </main>
             </div>
           </div>

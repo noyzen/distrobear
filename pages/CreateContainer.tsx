@@ -5,6 +5,21 @@ import ReactDOM from 'react-dom';
 import ToggleSwitch from '../components/ToggleSwitch';
 import DistroIcon from '../components/DistroLogo';
 
+// --- Animation Variants ---
+const gridContainerVariants = {
+  hidden: { opacity: 1 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 }
+  }
+};
+
+const gridItemVariants = {
+  hidden: { scale: 0.9, opacity: 0 },
+  visible: { scale: 1, opacity: 1 }
+};
+
+
 // --- Helper Components & Icons ---
 
 const CreationModal: React.FC<{
@@ -78,19 +93,23 @@ const CreationModal: React.FC<{
             <p className="text-gray-400 text-sm animate-pulse">Creation in progress...</p>
           ) : (
             <>
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={onClose}
                 className="px-6 py-2 bg-primary text-gray-200 font-semibold rounded-lg hover:bg-gray-600 transition-colors"
               >
                 {success ? 'Create Another' : 'Close'}
-              </button>
+              </motion.button>
               {success && (
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={onFinish}
                   className="px-6 py-2 bg-accent text-charcoal font-semibold rounded-lg hover:bg-accent-light transition-colors"
                 >
                   Go to My Containers
-                </button>
+                </motion.button>
               )}
             </>
           )}
@@ -250,13 +269,18 @@ const CreateContainer: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ s
                 {!isLoading && !error && filteredImages.length === 0 && (
                     <p className="text-center text-gray-500 p-8">No images found.</p>
                 )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                <motion.div 
+                  className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3"
+                  variants={gridContainerVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
                     <AnimatePresence>
                     {filteredImages.map(img => (
                         <motion.button 
                             layout
                             key={img.id}
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            variants={gridItemVariants}
                             onClick={() => setSelectedImage(img)}
                             className={`p-4 text-left rounded-lg border-2 transition-all duration-200 w-full flex items-center gap-3
                                 ${selectedImage?.id === img.id ? 'bg-accent/20 border-accent' : 'bg-primary-light border-primary hover:border-gray-600'}
@@ -270,7 +294,7 @@ const CreateContainer: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ s
                         </motion.button>
                     ))}
                     </AnimatePresence>
-                </div>
+                </motion.div>
             </div>
         </section>
 
@@ -347,14 +371,14 @@ const CreateContainer: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ s
                                     <input type="text" placeholder="Host Path (~/path/to/dir)" value={vol.hostPath} onChange={e => updateVolume(vol.id, 'hostPath', e.target.value)} className="flex-1 px-3 py-2 text-sm bg-primary-light border border-primary rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/50"/>
                                     <span className="text-gray-400">:</span>
                                     <input type="text" placeholder="Container Path (/path/in/cont)" value={vol.containerPath} onChange={e => updateVolume(vol.id, 'containerPath', e.target.value)} className="flex-1 px-3 py-2 text-sm bg-primary-light border border-primary rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/50"/>
-                                    <button type="button" onClick={() => removeVolume(vol.id)} className="p-2 text-gray-400 hover:text-red-400 transition-colors"><TrashIcon className="w-5 h-5"/></button>
+                                    <motion.button whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }} type="button" onClick={() => removeVolume(vol.id)} className="p-2 text-gray-400 hover:text-red-400 transition-colors"><TrashIcon className="w-5 h-5"/></motion.button>
                                 </motion.div>
                             ))}
                             </AnimatePresence>
                             </div>
-                             <button type="button" onClick={addVolume} className="mt-3 flex items-center gap-2 text-sm px-3 py-2 text-accent font-semibold rounded-lg hover:bg-accent/10 transition-colors">
+                             <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} type="button" onClick={addVolume} className="mt-3 flex items-center gap-2 text-sm px-3 py-2 text-accent font-semibold rounded-lg hover:bg-accent/10 transition-colors">
                                 <PlusIcon className="w-4 h-4" /> Add Volume
-                            </button>
+                            </motion.button>
                         </div>
                     </div>
                 </div>
@@ -368,13 +392,15 @@ const CreateContainer: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ s
                     You are about to create <strong className="text-accent">{containerName}</strong> from the image <strong className="text-accent">{selectedImage.repository}:{selectedImage.tag}</strong>.
                 </motion.div>
             )}
-            <button
+            <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleCreate}
                 disabled={!isFormValid || isCreating}
-                className="px-10 py-3 text-lg bg-accent text-charcoal font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-accent/50"
+                className="px-10 py-3 text-lg bg-accent text-charcoal font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200 transform focus:outline-none focus:ring-4 focus:ring-accent/50"
             >
                 Create Container
-            </button>
+            </motion.button>
         </section>
       </div>
       

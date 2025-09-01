@@ -5,6 +5,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ToggleSwitch from '../components/ToggleSwitch';
 import DistroIcon from '../components/DistroLogo';
 
+// --- Animation Variants ---
+const listContainerVariants = {
+  hidden: { opacity: 1 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 }
+  }
+};
+
+const listItemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: { y: 0, opacity: 1 }
+};
+
 // --- Local Components for MyContainers Page ---
 
 const ContainerInfoModal: React.FC<{
@@ -138,12 +152,14 @@ const ContainerInfoModal: React.FC<{
         </main>
 
         <footer className="p-4 border-t border-primary flex justify-end flex-shrink-0">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={onClose}
             className="px-6 py-2 bg-primary text-gray-200 font-semibold rounded-lg hover:bg-gray-600 transition-colors"
           >
             Close
-          </button>
+          </motion.button>
         </footer>
       </motion.div>
     </div>,
@@ -234,20 +250,24 @@ const SaveImageModal: React.FC<{
         )}
 
         <div className="flex justify-end gap-4 mt-8">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={onClose}
             disabled={isSaving}
             className="px-6 py-2 bg-primary text-gray-200 font-semibold rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50"
           >
             Cancel
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={handleSave}
             disabled={isSaving || !imageName || !imageTag}
             className="px-6 py-2 bg-accent text-charcoal font-semibold rounded-lg hover:bg-accent-light transition-colors disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
           >
             {isSaving ? 'Saving...' : 'Save Image'}
-          </button>
+          </motion.button>
         </div>
       </motion.div>
     </div>
@@ -290,18 +310,22 @@ const ConfirmationModal: React.FC<{
             </div>
         </div>
         <div className="flex justify-end gap-4 mt-8">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={onClose}
             className="px-6 py-2 bg-primary text-gray-200 font-semibold rounded-lg hover:bg-gray-600 transition-colors"
           >
             Cancel
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => { onConfirm(); onClose(); }}
             className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition-colors flex items-center justify-center gap-2"
           >
             <TrashIcon /> Delete
-          </button>
+          </motion.button>
         </div>
       </motion.div>
     </div>
@@ -319,7 +343,10 @@ const StatusIndicator: React.FC<{ status: string }> = ({ status }) => {
 };
 
 const ActionButton: React.FC<{ onClick: (e: React.MouseEvent) => void; disabled: boolean; children: React.ReactNode; primary?: boolean; isStopButton?: boolean, icon?: React.ReactNode }> = ({ onClick, disabled, children, primary = false, isStopButton = false, icon }) => (
-  <button
+  <motion.button
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    transition={{ type: 'spring', stiffness: 400, damping: 17 }}
     onClick={onClick}
     disabled={disabled}
     className={`w-28 flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed
@@ -329,7 +356,7 @@ const ActionButton: React.FC<{ onClick: (e: React.MouseEvent) => void; disabled:
   >
     {icon && !String(children).includes('...') && <span className="w-4 h-4">{icon}</span>}
     {children}
-  </button>
+  </motion.button>
 );
 
 const ContainerRow: React.FC<{
@@ -433,18 +460,17 @@ const ContainerRow: React.FC<{
   return (
     <motion.div 
         layout="position"
+        variants={listItemVariants}
         className={`
-            relative transition-shadow duration-300
+            relative
             ${ isSelected
-                ? 'z-10 my-1 bg-primary-light rounded-lg shadow-xl shadow-black/20'
+                ? 'z-10 my-1 bg-primary-light rounded-lg border border-accent/30 shadow-[0_0_15px_rgba(52,211,153,0.3)]'
                 : `z-0 border-b ${isLast ? 'border-transparent' : 'border-primary-light'}`
             }
         `}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
     >
-      <div
+      <motion.div
+        whileHover={!isSelected ? { y: -2, transition: { duration: 0.2 } } : {}}
         onClick={onSelect}
         className={`flex items-center p-4 cursor-pointer transition-colors duration-200
             ${ isSelected ? 'rounded-t-lg' : 'hover:bg-primary-light/50' }
@@ -464,7 +490,7 @@ const ContainerRow: React.FC<{
         <div className="flex-shrink-0">
           <ChevronDownIcon isSelected={isSelected} />
         </div>
-      </div>
+      </motion.div>
       <AnimatePresence initial={false}>
         {isSelected && (
           <motion.section
@@ -491,7 +517,10 @@ const ContainerRow: React.FC<{
                         {isActionInProgress ? '...' : 'Start'}
                         </ActionButton>
                     )}
-                     <button
+                     <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 17 }}
                         onClick={(e) => handleEnterClick(e)}
                         disabled={isActionInProgress}
                         className="w-28 flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed bg-primary-light text-gray-200 hover:bg-gray-500"
@@ -499,15 +528,18 @@ const ContainerRow: React.FC<{
                     >
                         <CommandLineIcon className="w-4 h-4" />
                         Enter
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 17 }}
                         onClick={() => setInfoModalOpen(true)}
                         className="w-28 flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-primary-light text-gray-200 hover:bg-gray-500"
                         title="Show detailed container information"
                     >
                         <InformationCircleIcon className="w-4 h-4" />
                         Info
-                    </button>
+                    </motion.button>
                 </div>
 
                 <div className="flex items-center justify-between pt-4">
@@ -524,14 +556,17 @@ const ContainerRow: React.FC<{
                             <p className="font-semibold text-gray-200">Export Container</p>
                             <p className="text-xs text-gray-400">Save current state as a new local image.</p>
                         </div>
-                        <button
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            transition={{ type: 'spring', stiffness: 400, damping: 17 }}
                             onClick={() => setSaveImageModalOpen(true)}
                             disabled={isActionInProgress || !isUp}
                             title={!isUp ? "Container must be running to save it as an image." : "Save a snapshot of the running container"}
                             className="px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-blue-600 text-white hover:bg-blue-500 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             <ArchiveBoxArrowDownIcon /> Save as Image
-                        </button>
+                        </motion.button>
                     </div>
                      {!isUp && (
                         <p className="text-xs text-yellow-500 text-right mt-1">
@@ -546,13 +581,16 @@ const ContainerRow: React.FC<{
                             <p className="font-semibold text-red-400">Danger Zone</p>
                             <p className="text-xs text-gray-500">This action cannot be undone.</p>
                         </div>
-                        <button
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            transition={{ type: 'spring', stiffness: 400, damping: 17 }}
                             onClick={() => setDeleteModalOpen(true)}
                             disabled={isActionInProgress}
                             className="px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-red-600 text-white hover:bg-red-500 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             <TrashIcon /> Delete
-                        </button>
+                        </motion.button>
                     </div>
                 </div>
             </div>
@@ -673,7 +711,13 @@ const MyContainers: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setC
     }
 
     return (
-      <motion.div className="bg-primary rounded-lg shadow-md" layout>
+      <motion.div 
+        className="bg-primary rounded-lg shadow-md" 
+        layout
+        variants={listContainerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         <AnimatePresence initial={false}>
             {filteredContainers.map((container, index) => (
             <ContainerRow
@@ -711,20 +755,24 @@ const MyContainers: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setC
                 />
             </div>
             <div className="flex gap-4 w-full sm:w-auto">
-                 <button
+                 <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => setCurrentPage('create-new')}
                     className="flex-1 sm:flex-none px-5 py-2 bg-primary-light text-gray-200 font-semibold rounded-lg hover:bg-accent hover:text-charcoal transition-all duration-200"
                 >
                     Create
-                </button>
-                <button
+                </motion.button>
+                <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => fetchContainers(true)}
                     disabled={isLoading}
                     className="flex-1 sm:flex-none px-5 py-2 bg-accent text-charcoal font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
                 >
                     {isLoading ? <SpinnerIcon /> : <ArrowPathIcon />}
                     {isLoading ? '...' : 'Refresh'}
-                </button>
+                </motion.button>
             </div>
         </div>
       </header>

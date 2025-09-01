@@ -3,6 +3,12 @@ import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import DistroIcon from '../components/DistroLogo';
 
+// --- Animation Variants ---
+const gridItemVariants = {
+  hidden: { scale: 0.9, opacity: 0 },
+  visible: { scale: 1, opacity: 1 }
+};
+
 // --- Helper Components & Icons ---
 
 const PullModal: React.FC<{
@@ -75,20 +81,24 @@ const PullModal: React.FC<{
           {isPulling ? (
             <>
                 <p className="text-gray-400 text-sm animate-pulse mr-auto">Download in progress...</p>
-                <button
+                <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={onCancel}
                     className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition-colors"
                 >
                     Cancel
-                </button>
+                </motion.button>
             </>
           ) : (
-             <button
+             <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={onClose}
                 className="px-6 py-2 bg-primary text-gray-200 font-semibold rounded-lg hover:bg-gray-600 transition-colors"
               >
                 Close
-              </button>
+              </motion.button>
           )}
         </footer>
       </motion.div>
@@ -245,14 +255,16 @@ const DownloadImages: React.FC = () => {
               placeholder="Enter custom image address to download..."
               className="flex-grow w-full px-4 py-2 bg-primary-light border border-primary rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/50"
             />
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={handlePullImage}
               disabled={!customImageAddress || isPulling}
               className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-2 bg-accent text-charcoal font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200"
             >
               <ArrowDownTrayIcon />
               Download
-            </button>
+            </motion.button>
           </div>
       </section>
       
@@ -271,15 +283,25 @@ const DownloadImages: React.FC = () => {
 
       <main className="space-y-8">
         {filteredImageList.length > 0 ? filteredImageList.map(({ category, images }) => (
-          <section key={category}>
+          <motion.section 
+            key={category}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+          >
             <h2 className="text-2xl font-semibold text-gray-300 mb-4 border-b-2 border-primary-light pb-2">{category}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <motion.div 
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+              variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+              initial="hidden"
+              animate="visible"
+            >
               <AnimatePresence>
               {images.map(image => (
                 <motion.button
                   layout
                   key={image.address}
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  variants={gridItemVariants}
                   onClick={() => handleSelectImage(image)}
                   className={`flex items-center p-4 text-left rounded-lg border-2 transition-all duration-200 w-full h-full transform hover:scale-105
                     ${selectedImageAddress === image.address ? 'bg-accent/20 border-accent' : 'bg-primary border-primary-light hover:border-gray-600'}
@@ -293,8 +315,8 @@ const DownloadImages: React.FC = () => {
                 </motion.button>
               ))}
               </AnimatePresence>
-            </div>
-          </section>
+            </motion.div>
+          </motion.section>
         )) : (
           <div className="text-center py-10">
             <p className="text-gray-400 text-lg">No distributions match your search.</p>

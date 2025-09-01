@@ -20,7 +20,9 @@ const NavItem: React.FC<{
 }> = ({ page, currentPage, setCurrentPage, icon, label, setSidebarOpen }) => {
   const isActive = currentPage === page;
   return (
-    <button
+    <motion.button
+      whileHover={{ x: isActive ? 0 : 3 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 15 }}
       onClick={() => {
         setCurrentPage(page);
         setSidebarOpen(false); // Close sidebar on mobile after navigation
@@ -33,7 +35,7 @@ const NavItem: React.FC<{
     >
       <span className="w-6 h-6 mr-3">{icon}</span>
       <span className="font-medium">{label}</span>
-    </button>
+    </motion.button>
   );
 };
 
