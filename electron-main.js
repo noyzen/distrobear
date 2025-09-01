@@ -169,11 +169,17 @@ ipcMain.handle('install-dependencies', async () => {
 
 
 /**
- * A robust helper for running shell commands.
- * It executes the given command inside a simple, non-login shell to avoid
- * sourcing user profiles (.bash_profile, etc.) which can interfere (e.g., nvm).
- * It prepares a clean environment before spawning the shell to ensure the
- * correct PATH is set and to avoid conflicts with user startup scripts.
+ * A robust helper for running distrobox commands.
+ * This function is carefully designed to handle conflicts between the GUI app's
+ * environment and the requirements of command-line tools.
+ * It uses `/usr/bin/env -u npm_config_prefix` to surgically remove a problematic
+ * environment variable that conflicts with shell startup scripts (like nvm).
+ * It then executes the actual command within a login shell (`bash -l`), which
+ * is essential for `distrobox` as it ensures the full user environment (correct
+ * PATH, DBUS_SESSION_BUS_ADDRESS, etc.) is loaded.
+ * This provides the command with the context it needs to run correctly,
+ * resolving the "invalid command" errors.
+ *
  * @param {string} command The command to execute (e.g., 'distrobox').
  * @param {string[]} [args=[]] An array of arguments for the command.
  * @returns {Promise<string>} A promise that resolves with the command's stdout.
@@ -181,47 +187,26 @@ ipcMain.handle('install-dependencies', async () => {
 function runCommand(command, args = []) {
   return new Promise((resolve, reject) => {
     const commandString = [command, ...args.map(a => `'${a}'`)].join(' ');
-    
-    // Create a sanitized environment.
-    const spawnEnv = {
-      ...process.env,
-      PATH: `${process.env.PATH || ''}:${path.join(os.homedir(), '.local', 'bin')}`
-    };
-    delete spawnEnv.npm_config_prefix;
-    
-    // TEMPORARY DEBUG LOGS
-    console.log(`[DEBUG] --- Preparing to run command ---`);
-    console.log(`[DEBUG] Full command: ${commandString}`);
-    console.log(`[DEBUG] Using PATH: ${spawnEnv.PATH}`);
-    if (process.env.npm_config_prefix) {
-      console.log(`[DEBUG] Original npm_config_prefix was present, but has been unset for child process.`);
-    } else {
-      console.log(`[DEBUG] Original npm_config_prefix was not set.`);
-    }
-    console.log(`[DEBUG] Spawning simple shell (/bin/bash -c) instead of login shell.`);
 
-    // Execute the command within a simple, non-login shell.
-    // This avoids sourcing user profiles which can interfere (e.g., nvm).
-    const child = spawn('/bin/bash', ['-c', commandString], { env: spawnEnv });
+    const child = spawn('/usr/bin/env', [
+      '-u', 'npm_config_prefix', // Unset conflicting var before shell starts
+      '/bin/bash', '-l', '-c',   // Run command in a full login shell
+      commandString
+    ]);
 
     let stdout = '';
     let stderr = '';
 
-    child.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-
-    child.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
+    child.stdout.on('data', (data) => { stdout += data.toString(); });
+    child.stderr.on('data', (data) => { stderr += data.toString(); });
 
     child.on('close', (code) => {
       const commandToRunForLogging = `${command} ${args.map(a => `'${a}'`).join(' ')}`;
-      console.log(`[INFO] Command "${commandToRunForLogging}" finished with code ${code}`);
       if (code !== 0) {
-        console.error(`[ERROR] Command "${commandToRunForLogging}" failed. Stderr:\n${stderr}`);
+        console.error(`[ERROR] Command "${commandToRunForLogging}" failed with code ${code}. Stderr:\n${stderr}`);
         reject(new Error(stderr.trim() || `Process exited with code ${code}`));
       } else {
+        console.log(`[INFO] Command "${commandToRunForLogging}" finished successfully.`);
         resolve(stdout.trim());
       }
     });
