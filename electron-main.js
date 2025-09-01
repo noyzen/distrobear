@@ -173,6 +173,7 @@ ipcMain.handle('install-dependencies', async () => {
  * Uses `spawn` for better handling of I/O and avoids buffer issues.
  * Executes commands within a login shell (`bash -l -c`) to ensure the
  * full user environment (PATH, DBUS, etc.) is available.
+ * It also unsets the 'npm_config_prefix' env var to prevent conflicts with nvm.
  * @param {string} command The command to execute (e.g., 'distrobox').
  * @param {string[]} [args=[]] An array of arguments for the command.
  * @returns {Promise<string>} A promise that resolves with the command's stdout.
@@ -181,12 +182,14 @@ function runCommand(command, args = []) {
   return new Promise((resolve, reject) => {
     // Basic shell-quoting for args to prevent injection vulnerabilities.
     const quotedArgs = args.map(arg => `'${String(arg).replace(/'/g, "'\\''")}'`);
-    const fullCommandString = `${command} ${quotedArgs.join(' ')}`;
+    const commandToRun = `${command} ${quotedArgs.join(' ')}`;
+    // Prepend 'unset npm_config_prefix' to avoid issues with nvm sourced from .bashrc/.bash_profile
+    const fullCommandString = `unset npm_config_prefix; ${commandToRun}`;
     
     const shell = '/bin/bash';
     const shellArgs = ['-l', '-c', fullCommandString];
     
-    console.log(`[INFO] Spawning: ${shell} ${shellArgs.join(' ')}`);
+    console.log(`[INFO] Spawning: ${commandToRun}`);
 
     const child = spawn(shell, shellArgs, { env: execOptions.env, shell: false });
 
@@ -202,9 +205,9 @@ function runCommand(command, args = []) {
     });
 
     child.on('close', (code) => {
-      console.log(`[INFO] Command "${fullCommandString}" finished with code ${code}`);
+      console.log(`[INFO] Command "${commandToRun}" finished with code ${code}`);
       if (code !== 0) {
-        console.error(`[ERROR] Command "${fullCommandString}" failed. Stderr:\n${stderr}`);
+        console.error(`[ERROR] Command "${commandToRun}" failed. Stderr:\n${stderr}`);
         reject(new Error(stderr.trim() || `Process exited with code ${code}`));
       } else {
         resolve(stdout.trim());
@@ -212,7 +215,7 @@ function runCommand(command, args = []) {
     });
 
     child.on('error', (err) => {
-      console.error(`[ERROR] Failed to start subprocess for "${fullCommandString}": ${err.message}`);
+      console.error(`[ERROR] Failed to start subprocess for "${commandToRun}": ${err.message}`);
       reject(err);
     });
   });
