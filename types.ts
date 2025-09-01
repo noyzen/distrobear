@@ -13,6 +13,16 @@ export interface Container {
   image: string;
 }
 
+export interface DependencyStatus {
+  name: 'distrobox' | 'podman' | 'docker';
+  isInstalled: boolean;
+}
+
+export interface DependencyCheckResult {
+  dependencies: DependencyStatus[];
+  needsSetup: boolean;
+}
+
 export interface IElectronAPI {
   getOSInfo: () => Promise<OSInfo>;
   listContainers: () => Promise<Container[]>;
@@ -20,6 +30,9 @@ export interface IElectronAPI {
   maximizeWindow: () => void;
   closeWindow: () => void;
   onWindowStateChange: (callback: (isMaximized: boolean) => void) => void;
+  checkDependencies: () => Promise<DependencyCheckResult>;
+  installDependencies: () => Promise<void>;
+  onInstallationLog: (callback: (log: string) => void) => void;
 }
 
 declare global {
