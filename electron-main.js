@@ -6,6 +6,14 @@ const sudo = require('sudo-prompt');
 
 let mainWindow; // Reference to the main window
 
+// Define a common options object for exec calls that need the modified PATH
+const execOptions = {
+  env: {
+    ...process.env,
+    PATH: `${process.env.PATH || ''}:${path.join(os.homedir(), '.local', 'bin')}`
+  }
+};
+
 function parseDistroboxList(output) {
   const lines = output.trim().split('\n');
   if (lines.length < 2) return [];
@@ -54,7 +62,7 @@ function createWindow() {
 // Helper function to check if a command exists
 const commandExists = (command) => {
   return new Promise((resolve) => {
-    exec(`command -v ${command}`, (error) => resolve(!error));
+    exec(`command -v ${command}`, execOptions, (error) => resolve(!error));
   });
 };
 
@@ -137,7 +145,7 @@ ipcMain.handle('install-dependencies', async () => {
 
 ipcMain.handle('list-containers', async () => {
   return new Promise((resolve, reject) => {
-    exec('distrobox list --no-color --verbose', (error, stdout, stderr) => {
+    exec('distrobox list --no-color --verbose', execOptions, (error, stdout, stderr) => {
       if (error) {
         if (stderr.includes("command not found")) {
            return reject(new Error('Distrobox command not found. Is distrobox installed and in your PATH?'));
@@ -152,7 +160,7 @@ ipcMain.handle('list-containers', async () => {
 // New IPC handlers for container actions
 ipcMain.handle('container-start', async (event, name) => {
   return new Promise((resolve, reject) => {
-    exec(`distrobox start ${name}`, (error, stdout, stderr) => {
+    exec(`distrobox start ${name}`, execOptions, (error, stdout, stderr) => {
       if (error) {
         console.error(`Failed to start container ${name}: ${stderr}`);
         return reject(new Error(stderr));
@@ -164,7 +172,7 @@ ipcMain.handle('container-start', async (event, name) => {
 
 ipcMain.handle('container-stop', async (event, name) => {
   return new Promise((resolve, reject) => {
-    exec(`distrobox stop ${name}`, (error, stdout, stderr) => {
+    exec(`distrobox stop ${name}`, execOptions, (error, stdout, stderr) => {
       if (error) {
         console.error(`Failed to stop container ${name}: ${stderr}`);
         return reject(new Error(stderr));
