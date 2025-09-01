@@ -693,11 +693,42 @@ ipcMain.handle('list-applications', async () => {
             try {
                 const filePath = path.join(hostAppsPath, filename);
                 const content = await fs.readFile(filePath, 'utf-8');
-                // Regex to find 'distrobox enter' and capture the container name.
-                // It handles variations like -n, --name, and optional quotes around the name.
-                const match = content.match(/Exec=.*distrobox enter\s+(?:-n|--name)\s+['"]?([a-zA-Z0-9-_\.]+)['"]?/);
-                if (match && match[1]) {
-                    const containerNameFromHostFile = match[1];
+                
+                let containerNameFromHostFile = null;
+                const execLineMatch = content.match(/^Exec=(.*)$/m); // Find Exec line
+                
+                if (execLineMatch) {
+                    const command = execLineMatch[1];
+                    const tokens = command.split(/\s+/);
+                    
+                    // Find where `distrobox enter` starts.
+                    const distroboxIndex = tokens.findIndex(t => t.endsWith('/distrobox') || t === 'distrobox');
+                    
+                    if (distroboxIndex !== -1 && tokens[distroboxIndex + 1] === 'enter') {
+                        const args = tokens.slice(distroboxIndex + 2);
+                        
+                        for (let i = 0; i < args.length; i++) {
+                            const arg = args[i];
+
+                            if (arg === '--') { // Stop parsing at '--'
+                                break;
+                            }
+
+                            if (arg === '--name' || arg === '-n') {
+                                if (i + 1 < args.length) {
+                                    containerNameFromHostFile = args[i + 1].replace(/['"]/g, '');
+                                    break;
+                                }
+                            } else if (!arg.startsWith('-')) {
+                                // First non-flag argument is the container name
+                                containerNameFromHostFile = arg.replace(/['"]/g, '');
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (containerNameFromHostFile) {
                     exportedAppToContainerMap.set(filename, containerNameFromHostFile);
                 }
             } catch (e) {
