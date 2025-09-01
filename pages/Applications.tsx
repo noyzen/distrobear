@@ -26,24 +26,24 @@ const ApplicationRow: React.FC<{
   app: ExportableApplication;
   onActionComplete: () => void;
 }> = ({ app, onActionComplete }) => {
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isProcessing, setIsProcessing] = useState<'share' | 'unshare' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleToggleExport = async () => {
-    setIsProcessing(true);
+  const handleAction = async (action: 'share' | 'unshare') => {
+    setIsProcessing(action);
     setError(null);
     try {
-      if (app.isExported) {
-        await window.electronAPI.applicationUnexport({ containerName: app.containerName, appName: app.appName });
-      } else {
+      if (action === 'share') {
         await window.electronAPI.applicationExport({ containerName: app.containerName, appName: app.appName });
+      } else {
+        await window.electronAPI.applicationUnexport({ containerName: app.containerName, appName: app.appName });
       }
       onActionComplete();
     } catch (err) {
-      console.error(`Failed to toggle export for ${app.name}:`, err);
+      console.error(`Failed to ${action} for ${app.name}:`, err);
       setError(err instanceof Error ? err.message : "An unknown error occurred.");
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(null);
     }
   };
 
@@ -67,17 +67,24 @@ const ApplicationRow: React.FC<{
         )}
       </div>
       <div className="flex-shrink-0 ml-4">
-        <button
-          onClick={handleToggleExport}
-          disabled={isProcessing}
-          className={`w-28 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed
-            ${app.isExported
-              ? 'bg-red-600 text-white hover:bg-red-500'
-              : 'bg-accent text-charcoal hover:bg-accent-light'
-            }`}
-        >
-          {isProcessing ? '...' : (app.isExported ? 'Unshare' : 'Share')}
-        </button>
+        <div className="flex items-center gap-2">
+            <button
+                onClick={() => handleAction('share')}
+                disabled={isProcessing !== null || app.isExported}
+                className={`w-24 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-accent text-charcoal hover:bg-accent-light disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed`}
+                title={app.isExported ? 'This application is already shared with the host.' : 'Share this application with the host.'}
+            >
+                {isProcessing === 'share' ? '...' : 'Share'}
+            </button>
+            <button
+                onClick={() => handleAction('unshare')}
+                disabled={isProcessing !== null || !app.isExported}
+                className={`w-24 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-red-600 text-white hover:bg-red-500 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed`}
+                title={!app.isExported ? 'This application is not shared with the host.' : 'Remove this application from the host.'}
+            >
+                {isProcessing === 'unshare' ? '...' : 'Unshare'}
+            </button>
+        </div>
       </div>
     </motion.div>
   );
