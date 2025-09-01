@@ -91,9 +91,20 @@ function parseDistroboxList(output) {
         imageParts.push(getColumnValue(line, 'IMAGE'));
     }
 
-    const name = nameParts.filter(Boolean).join(' ');
-    const status = statusParts.filter(Boolean).join(' ');
-    const image = imageParts.filter(Boolean).join(' ');
+    const customJoin = (parts) => {
+      // This reducer-based join is smarter than a simple .join(' ').
+      // It avoids adding a space if the previous part ends with a hyphen,
+      // which can happen with wrapped container names or other text.
+      return parts.filter(Boolean).reduce((acc, part) => {
+        if (!acc) return part;
+        if (acc.endsWith('-')) return acc + part;
+        return acc + ' ' + part;
+      }, '');
+    };
+
+    const name = customJoin(nameParts);
+    const status = customJoin(statusParts);
+    const image = customJoin(imageParts);
     
     if (!name || !status || !image) return null;
     
