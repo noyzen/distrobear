@@ -15,8 +15,8 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ isOn, onToggle, disabled })
       aria-checked={isOn}
       onClick={onToggle}
       disabled={disabled}
-      className={`relative inline-flex items-center h-6 w-11 flex-shrink-0 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-primary-light focus:ring-accent/50 ${
-        isOn ? 'bg-accent' : 'bg-primary'
+      className={`relative inline-flex items-center h-6 w-11 flex-shrink-0 rounded-full border-2 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-primary-light focus:ring-accent/50 ${
+        isOn ? 'bg-accent border-transparent' : 'bg-primary-dark border-primary-light'
       } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
     >
       <span className="sr-only">Toggle</span>
@@ -26,7 +26,7 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ isOn, onToggle, disabled })
         layout
         transition={{ type: 'spring', stiffness: 500, damping: 30 }}
         initial={false}
-        animate={{ x: isOn ? '1.25rem' : '0rem' }} // 1.25rem is w-5
+        animate={{ x: isOn ? '1rem' : '0rem' }} // Adjusted for border-2
       />
     </button>
   );
