@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import type { ExportableApplication } from '../types';
+import type { ExportableApplication, ApplicationList } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const SearchIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -7,6 +7,13 @@ const SearchIcon: React.FC<{ className?: string }> = ({ className }) => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
   </svg>
 );
+
+const InformationCircleIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+    </svg>
+);
+
 
 const ApplicationRow: React.FC<{
   app: ExportableApplication;
@@ -71,6 +78,7 @@ const ApplicationRow: React.FC<{
 
 const Applications: React.FC = () => {
   const [applications, setApplications] = useState<ExportableApplication[]>([]);
+  const [unscannedContainers, setUnscannedContainers] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -79,8 +87,9 @@ const Applications: React.FC = () => {
     if (!isRefresh) setIsLoading(true);
     setError(null);
     try {
-      const result = await window.electronAPI.listApplications();
-      setApplications(result);
+      const result: ApplicationList = await window.electronAPI.listApplications();
+      setApplications(result.applications);
+      setUnscannedContainers(result.unscannedContainers);
     } catch (err) {
       console.error("Error fetching applications:", err);
       setError(err instanceof Error ? err.message : "An unknown error occurred.");
@@ -104,7 +113,7 @@ const Applications: React.FC = () => {
 
   const renderContent = () => {
     if (isLoading) {
-      return <p className="text-center text-gray-400 p-8 animate-pulse">Loading applications...</p>;
+      return <p className="text-center text-gray-400 p-8 animate-pulse">Scanning running containers for applications...</p>;
     }
     if (error) {
       return (
@@ -114,15 +123,15 @@ const Applications: React.FC = () => {
         </div>
       );
     }
-    if (applications.length === 0) {
+    if (applications.length === 0 && unscannedContainers.length === 0) {
       return (
         <div className="text-center py-10">
           <p className="text-gray-400 text-lg">No applications found in any container.</p>
-          <p className="text-gray-500 mt-2">Make sure you have graphical applications installed in your containers.</p>
+          <p className="text-gray-500 mt-2">Make sure you have graphical applications installed in your running containers.</p>
         </div>
       );
     }
-    if (filteredApplications.length === 0) {
+    if (filteredApplications.length === 0 && applications.length > 0) {
       return (
         <div className="text-center py-10">
           <p className="text-gray-400 text-lg">No applications match your search.</p>
@@ -142,6 +151,11 @@ const Applications: React.FC = () => {
             />
           ))}
         </AnimatePresence>
+         {filteredApplications.length === 0 && applications.length === 0 && (
+             <div className="text-center p-8">
+                 <p className="text-gray-400 text-lg">No applications found in running containers.</p>
+             </div>
+         )}
       </motion.div>
     );
   };
@@ -172,6 +186,22 @@ const Applications: React.FC = () => {
           </button>
         </div>
       </header>
+      
+      {unscannedContainers.length > 0 && (
+        <div className="bg-blue-900/50 border border-blue-700 text-blue-200 p-4 rounded-lg mb-6 flex items-start gap-3">
+            <InformationCircleIcon className="w-6 h-6 flex-shrink-0 mt-0.5" />
+            <div>
+                <h3 className="font-bold">Some containers were not scanned</h3>
+                <p className="text-sm mt-1">
+                    Only running containers are scanned for applications. The following are stopped: <span className="font-semibold">{unscannedContainers.join(', ')}</span>.
+                </p>
+                <p className="text-sm mt-1">
+                    You can start them from the "My Containers" page.
+                </p>
+            </div>
+        </div>
+      )}
+
       {renderContent()}
     </div>
   );

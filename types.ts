@@ -46,6 +46,11 @@ export interface ExportableApplication {
   isExported: boolean;
 }
 
+export interface ApplicationList {
+  applications: ExportableApplication[];
+  unscannedContainers: string[];
+}
+
 
 export interface DependencyStatus {
   name: 'distrobox' | 'podman';
@@ -76,7 +81,7 @@ export interface IElectronAPI {
   containerCommit: (name: string, imageName: string, imageTag: string) => Promise<void>;
   containerInfo: (name: string) => Promise<ContainerInfo>;
   getTerminal: () => Promise<string | null>;
-  listApplications: () => Promise<ExportableApplication[]>;
+  listApplications: () => Promise<ApplicationList>;
   applicationExport: (args: { containerName: string, appName: string }) => Promise<void>;
   applicationUnexport: (args: { containerName: string, appName: string }) => Promise<void>;
 }

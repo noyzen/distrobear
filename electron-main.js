@@ -232,9 +232,12 @@ function runCommandStreamed(command, args = [], onData) {
  *
  * @param {string} command The command to execute (e.g., 'distrobox').
  * @param {string[]} [args=[]] An array of arguments for the command.
+ * @param {object} [options={}] Additional options for execution.
+ * @param {number[]} [options.supressErrorLoggingForExitCodes=[]] An array of exit codes to suppress error logging for.
  * @returns {Promise<string>} A promise that resolves with the command's stdout.
  */
-function runCommand(command, args = []) {
+function runCommand(command, args = [], options = {}) {
+  const { supressErrorLoggingForExitCodes = [] } = options;
   return new Promise((resolve, reject) => {
     const commandString = [command, ...args.map(a => `'${a}'`)].join(' ');
 
@@ -253,7 +256,9 @@ function runCommand(command, args = []) {
     child.on('close', (code) => {
       const commandToRunForLogging = `${command} ${args.map(a => `'${a}'`).join(' ')}`;
       if (code !== 0) {
-        console.error(`[ERROR] Command "${commandToRunForLogging}" failed with code ${code}. Stderr:\n${stderr}`);
+        if (!supressErrorLoggingForExitCodes.includes(code)) {
+            console.error(`[ERROR] Command "${commandToRunForLogging}" failed with code ${code}. Stderr:\n${stderr}`);
+        }
         reject(new Error(stderr.trim() || `Process exited with code ${code}`));
       } else {
         console.log(`[INFO] Command "${commandToRunForLogging}" finished successfully.`);
@@ -663,14 +668,12 @@ ipcMain.handle('container-info', async (event, name) => {
 // Application Management IPC handlers
 ipcMain.handle('list-applications', async () => {
     // 1. Get all exported apps in one go and parse them.
-    // This is more efficient and compatible with modern distrobox versions.
     const exportedOutput = await runCommand('distrobox', ['export', '--list']).catch((err) => {
         console.warn(`Could not list exported apps (distrobox version might be old): ${err.message}`);
         return '';
     });
     const exportedAppsByContainer = new Map();
     exportedOutput.split('\n').filter(Boolean).forEach(line => {
-        // Expected format: "appName from containerName"
         const parts = line.split(' from ');
         if (parts.length === 2) {
             const appIdentifier = parts[0].trim();
@@ -682,45 +685,43 @@ ipcMain.handle('list-applications', async () => {
         }
     });
 
-    // 2. Get all container names
-    const psOutput = await runCommand('podman', ['ps', '-a', '--filter', 'label=manager=distrobox', '--format', '{{.Names}}']).catch(() => '');
-    const containerNames = psOutput.split('\n').filter(Boolean);
+    // 2. Get all containers and their statuses to determine which are running.
+    const psOutput = await runCommand('podman', ['ps', '-a', '--filter', 'label=manager=distrobox', '--format', '{{.Names}}\t{{.Status}}']).catch(() => '');
+    const allContainers = psOutput.split('\n').filter(Boolean).map(line => {
+        const [name, status] = line.split('\t');
+        return { name, status };
+    });
 
-    if (containerNames.length === 0) {
-        return [];
+    const runningContainers = allContainers.filter(c => c.status.toLowerCase().startsWith('up'));
+    const unscannedContainers = allContainers.filter(c => !c.status.toLowerCase().startsWith('up')).map(c => c.name);
+
+    if (runningContainers.length === 0) {
+        return { applications: [], unscannedContainers };
     }
 
-    // 3. Map over containers to find all apps in parallel
-    const allAppsPromises = containerNames.map(async (containerName) => {
+    // 3. Map over ONLY running containers to find all apps in parallel
+    const allAppsPromises = runningContainers.map(async ({ name: containerName }) => {
         try {
-            // 3a. Get the set of exported apps for this specific container from our map
             const exportedApps = exportedAppsByContainer.get(containerName) || new Set();
-
-            // 3b. Find all .desktop files
             const findCommand = `find /usr/share/applications /usr/local/share/applications ~/.local/share/applications -path '*/.local/share/applications' -prune -o -name "*.desktop" -type f -print 2>/dev/null`;
             const findOutput = await runCommand('distrobox', ['enter', containerName, '--', 'sh', '-c', findCommand]).catch(() => '');
             if (!findOutput) return [];
             const desktopFiles = findOutput.split('\n').filter(Boolean);
 
-            // 3c. For each desktop file, get its details
             const appDetailsPromises = desktopFiles.map(async (desktopFile) => {
                 try {
-                    const appName = path.basename(desktopFile); // e.g., 'firefox.desktop'
+                    const appName = path.basename(desktopFile);
                     const appIdentifier = appName.replace(/\.desktop$/, '');
-
-                    // Use a more robust grep/cut command to avoid shell quoting issues with awk.
-                    // Also, handle localized names like Name[en_US]=
                     const escapedFile = `'${desktopFile.replace(/'/g, "'\\''")}'`;
                     const getNameCommand = `grep -m 1 '^Name' ${escapedFile} | cut -d'=' -f2-`;
                     const displayName = await runCommand('distrobox', ['enter', containerName, '--', 'sh', '-c', getNameCommand]);
 
-                    // Also check for 'NoDisplay=true' to hide system/background apps.
+                    // Use grep -q which exits 1 (error) on not found. Suppress logging for this expected "failure".
                     const getNoDisplayCommand = `grep -q '^NoDisplay=true' ${escapedFile}`;
-                    const isHidden = await runCommand('distrobox', ['enter', containerName, '--', 'sh', '-c', getNoDisplayCommand])
-                        .then(() => true)
-                        .catch(() => false);
-                    
-                    // Ignore apps without a display name, hidden apps, or Wayland-specific entries that often duplicate others.
+                    const isHidden = await runCommand('distrobox', ['enter', containerName, '--', 'sh', '-c', getNoDisplayCommand], { supressErrorLoggingForExitCodes: [1] })
+                        .then(() => true) // Command succeeded, so NoDisplay=true exists
+                        .catch(() => false); // Command failed, so NoDisplay=true does not exist
+
                     if (!displayName || isHidden || displayName.toLowerCase().includes('wayland')) {
                         return null;
                     }
@@ -740,27 +741,37 @@ ipcMain.handle('list-applications', async () => {
             return (await Promise.all(appDetailsPromises)).filter(Boolean);
         } catch (e) {
             console.error(`Error listing applications for container ${containerName}: ${e.message}`);
-            return []; // Return empty array for this container if it fails
+            return [];
         }
     });
 
     const nestedApps = await Promise.all(allAppsPromises);
-    // 4. Flatten, sort and return
-    return nestedApps.flat().sort((a, b) => a.name.localeCompare(b.name));
+    const applications = nestedApps.flat().sort((a, b) => a.name.localeCompare(b.name));
+
+    // 4. Return the final payload
+    return { applications, unscannedContainers };
 });
 
 ipcMain.handle('application-export', async (event, { containerName, appName }) => {
   const sanitizedContainer = String(containerName).replace(/[^a-zA-Z0-9-_\.]/g, '');
   const sanitizedApp = String(appName).replace(/[^a-zA-Z0-9-_\.\s]/g, '');
   if (!sanitizedContainer || !sanitizedApp) throw new Error('Invalid arguments');
-  return await runCommand('distrobox', ['export', '--app', sanitizedApp, '-n', sanitizedContainer]);
+
+  // Distrobox expects the app name WITHOUT the .desktop suffix.
+  const appIdentifier = sanitizedApp.replace(/\.desktop$/, '');
+
+  return await runCommand('distrobox', ['export', '--app', appIdentifier, '-n', sanitizedContainer]);
 });
 
 ipcMain.handle('application-unexport', async (event, { containerName, appName }) => {
   const sanitizedContainer = String(containerName).replace(/[^a-zA-Z0-9-_\.]/g, '');
   const sanitizedApp = String(appName).replace(/[^a-zA-Z0-9-_\.\s]/g, '');
   if (!sanitizedContainer || !sanitizedApp) throw new Error('Invalid arguments');
-  return await runCommand('distrobox', ['export', '--app', sanitizedApp, '-n', sanitizedContainer, '--delete']);
+
+  // Distrobox expects the app name WITHOUT the .desktop suffix.
+  const appIdentifier = sanitizedApp.replace(/\.desktop$/, '');
+
+  return await runCommand('distrobox', ['export', '--app', appIdentifier, '-n', sanitizedContainer, '--delete']);
 });
 
 ipcMain.on('window-minimize', () => BrowserWindow.getFocusedWindow()?.minimize());

@@ -14,7 +14,6 @@ const NavItem: React.FC<{
   page: Page;
   currentPage: Page;
   setCurrentPage: (page: Page) => void;
-  // FIX: Use React.ReactElement instead of JSX.Element to avoid namespace errors in some TypeScript configurations.
   icon: React.ReactElement;
   label: string;
   setSidebarOpen: (isOpen: boolean) => void;
