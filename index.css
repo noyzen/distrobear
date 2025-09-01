@@ -2,17 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@font-face {
-  font-family: 'DistroLogos';
-  /* The path is now absolute from the root.
-     For this to work, the font file `dostro-logos.woff2` MUST be placed
-     in a `public` directory at the root of your project. */
-  src: url('/dostro-logos.woff2') format('woff2');
-  font-weight: normal;
-  font-style: normal;
-  font-display: block;
-}
-
 /* Required for transparent window with rounded corners */
 body {
   background: transparent;
