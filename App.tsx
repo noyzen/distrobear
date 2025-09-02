@@ -113,7 +113,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-charcoal font-sans rounded-lg overflow-hidden shadow-2xl">
+    <div className="flex flex-col h-screen bg-primary font-sans overflow-hidden shadow-2xl">
       <TitleBar />
       {renderAppStateContent()}
     </div>

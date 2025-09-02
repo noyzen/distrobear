@@ -5,7 +5,7 @@ import ToggleSwitch from '../components/ToggleSwitch';
 import ApplicationRow from '../components/applications/ApplicationRow';
 import StartContainersModal from '../components/applications/StartContainersModal';
 import SpinnerIcon from '../components/shared/SpinnerIcon';
-import { MagnifyingGlassIcon, ArrowPathIcon, ChevronDownIcon } from '../components/Icons';
+import { MagnifyingGlassIcon, ArrowPathIcon, ChevronDownIcon, InformationCircleIcon } from '../components/Icons';
 
 const listContainerVariants = {
   hidden: { opacity: 1 },
@@ -241,6 +241,20 @@ const Applications: React.FC = () => {
         </div>
       </header>
       
+      {unscannedContainers.length > 0 && !isLoading && (
+        <div className="bg-primary-light/50 border border-primary-light p-4 rounded-lg mb-6 text-sm text-gray-400 flex items-center gap-3">
+          <InformationCircleIcon className="w-6 h-6 text-accent flex-shrink-0" />
+          <div>
+            <p>
+              <strong>Tip:</strong> Only applications from <strong className="text-gray-200">running</strong> containers are listed below.
+            </p>
+            <p className="mt-1">
+              There {unscannedContainers.length === 1 ? 'is' : 'are'} <strong className="text-gray-200">{unscannedContainers.length} stopped container(s)</strong> that could not be scanned. Start them from the "My Containers" page to see their apps.
+            </p>
+          </div>
+        </div>
+      )}
+
       {renderContent()}
 
       <StartContainersModal 

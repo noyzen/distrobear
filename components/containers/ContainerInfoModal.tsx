@@ -66,48 +66,52 @@ const ContainerInfoModal: React.FC<ContainerInfoModalProps> = ({ isOpen, onClose
     }
     if (info) {
         return (
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                {/* Left Column */}
-                <div className="space-y-4">
-                    <section>
-                        <h3 className="text-lg font-semibold text-gray-300 border-b border-primary pb-2 mb-2">Overview</h3>
-                        <DetailItem label="ID" value={info.id} isCode />
-                        <DetailItem label="Status" value={info.status} />
-                        <DetailItem label="Backend" value={info.backend} isCode />
-                        <DetailItem label="PID" value={info.pid > 0 ? info.pid : 'N/A'} />
-                        <DetailItem label="Created" value={new Date(info.created).toLocaleString()} />
-                        {info.size && info.size !== 'N/A' && <DetailItem label="Size" value={info.size} />}
-                    </section>
-                     <section>
-                        <h3 className="text-lg font-semibold text-gray-300 border-b border-primary pb-2 mb-2">Configuration</h3>
-                        <BooleanPill label="Init Process" value={info.init} />
-                        <BooleanPill label="Root Mode" value={info.root} />
-                        <BooleanPill label="NVIDIA Runtime" value={info.nvidia} />
-                    </section>
+            <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                    {/* Left Column */}
+                    <div className="space-y-4">
+                        <section>
+                            <h3 className="text-lg font-semibold text-gray-300 border-b border-primary pb-2 mb-2">Overview</h3>
+                            <DetailItem label="ID" value={info.id} isCode />
+                            <DetailItem label="Status" value={info.status} />
+                            <DetailItem label="Backend" value={info.backend} isCode />
+                            <DetailItem label="PID" value={info.pid > 0 ? info.pid : 'N/A'} />
+                            <DetailItem label="Created" value={new Date(info.created).toLocaleString()} />
+                            {info.size && info.size !== 'N/A' && <DetailItem label="Size" value={info.size} />}
+                        </section>
+                         <section>
+                            <h3 className="text-lg font-semibold text-gray-300 border-b border-primary pb-2 mb-2">Configuration</h3>
+                            <BooleanPill label="Init Process" value={info.init} />
+                            <BooleanPill label="Root Mode" value={info.root} />
+                            <BooleanPill label="NVIDIA Runtime" value={info.nvidia} />
+                        </section>
+                    </div>
+                    {/* Right Column */}
+                    <div className="space-y-4">
+                        <section>
+                            <h3 className="text-lg font-semibold text-gray-300 border-b border-primary pb-2 mb-2">Image & User</h3>
+                            <DetailItem label="Image" value={info.image} isCode />
+                            <DetailItem label="Entrypoint" value={info.entrypoint} isCode />
+                            <DetailItem label="User" value={info.user_name} isCode />
+                            <DetailItem label="Hostname" value={info.hostname} isCode />
+                            <DetailItem label="Home Directory (in Container)" value={info.home_dir} isCode />
+                        </section>
+                    </div>
                 </div>
-                {/* Right Column */}
-                <div className="space-y-4">
-                    <section>
-                        <h3 className="text-lg font-semibold text-gray-300 border-b border-primary pb-2 mb-2">Image & User</h3>
-                        <DetailItem label="Image" value={info.image} isCode />
-                        <DetailItem label="Entrypoint" value={info.entrypoint} isCode />
-                        <DetailItem label="User" value={info.user_name} isCode />
-                        <DetailItem label="Hostname" value={info.hostname} isCode />
-                        <DetailItem label="Home Directory (in Container)" value={info.home_dir} isCode />
-                    </section>
-                    <section>
-                        <h3 className="text-lg font-semibold text-gray-300 border-b border-primary pb-2 mb-2">Mounted Volumes</h3>
-                         <div className="text-xs text-gray-200 font-mono bg-primary-dark/50 rounded-lg p-3 h-48 overflow-y-auto">
-                            {info.volumes && info.volumes.length > 0 ? (
-                                <ul className="space-y-1">
-                                    {info.volumes.map((vol, i) => <li key={i}>{vol}</li>)}
-                                </ul>
-                            ) : (
-                                <p className="text-gray-500 normal-case">No custom volumes mounted.</p>
-                            )}
-                        </div>
-                    </section>
-                </div>
+
+                {/* Full-width Volumes Section */}
+                <section className="mt-6 pt-6 border-t border-primary">
+                    <h3 className="text-lg font-semibold text-gray-300 mb-2">Mounted Volumes</h3>
+                     <div className="text-xs text-gray-200 font-mono bg-primary-dark/50 rounded-lg p-3 h-48 overflow-y-auto">
+                        {info.volumes && info.volumes.length > 0 ? (
+                            <ul className="space-y-1">
+                                {info.volumes.map((vol, i) => <li key={i}>{vol}</li>)}
+                            </ul>
+                        ) : (
+                            <p className="text-gray-500 normal-case">No custom volumes mounted.</p>
+                        )}
+                    </div>
+                </section>
             </div>
         );
     }

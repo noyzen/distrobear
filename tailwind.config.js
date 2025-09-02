@@ -10,15 +10,15 @@ module.exports = {
     extend: {
       colors: {
         'accent': {
-          'DEFAULT': '#34d399', // A nice, vibrant light green (Emerald 400)
+          'DEFAULT': '#34d399', // Light Green
           'light': '#6ee7b7',
           'dark': '#059669',
         },
-        'charcoal': '#111827', // A very dark gray, almost black
+        'background': '#0a0a0a', // Near-black for body
         'primary': {
-          'DEFAULT': '#1f2937', // Gray 800
-          'light': '#374151',   // Gray 700
-          'dark': '#111827'     // Gray 900
+          'DEFAULT': '#1e1e1e', // Dark grey for main surfaces
+          'light': '#2e2e2e',   // Lighter grey for hovers, inputs
+          'dark': '#141414'     // Darker grey for title bar
         },
       }
     },

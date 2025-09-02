@@ -25,7 +25,7 @@ const StatusIndicator: React.FC<{ status: string }> = ({ status }) => {
 
   return (
     <div className="flex-shrink-0 w-8 flex items-center justify-center" title="Stopped">
-      <div className="h-3 w-3 rounded-full bg-gray-500"></div>
+      <div className="h-3 w-3 rounded-full border border-gray-600"></div>
     </div>
   );
 };
