@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { OSInfo, VersionInfo } from '../types';
 import { motion } from 'framer-motion';
+import { ArrowPathIcon, ArrowTopRightOnSquareIcon } from '../components/Icons';
 
 interface SystemInfoProps {
   onRerunSetup: () => void;
@@ -143,8 +144,5 @@ const SystemInfo: React.FC<SystemInfoProps> = ({ onRerunSetup }) => {
     </div>
   );
 };
-
-const ArrowPathIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12c0 4.142-3.358 7.5-7.5 7.5S4.5 16.142 4.5 12 7.858 4.5 12 4.5c2.36 0 4.471.956 6.012 2.502m1.488-2.492v4.98h-4.98" /></svg>;
-const ArrowTopRightOnSquareIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5M21 3L12 12" /></svg>;
 
 export default SystemInfo;

@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { Page, LocalImage, CreateContainerOptions } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
-import ReactDOM from 'react-dom';
 import ToggleSwitch from '../components/ToggleSwitch';
 import DistroIcon from '../components/DistroLogo';
+import CreationModal from '../components/create-container/CreationModal';
+import { MagnifyingGlassIcon, PlusIcon, TrashIcon } from '../components/Icons';
 
 // --- Animation Variants ---
 const gridContainerVariants = {
@@ -18,110 +19,6 @@ const gridItemVariants = {
   hidden: { scale: 0.9, opacity: 0 },
   visible: { scale: 1, opacity: 1 }
 };
-
-
-// --- Helper Components & Icons ---
-
-const CreationModal: React.FC<{
-  isOpen: boolean;
-  logs: string[];
-  error: string | null;
-  success: boolean;
-  isCreating: boolean;
-  onClose: () => void;
-  onFinish: () => void;
-}> = ({ isOpen, logs, error, success, isCreating, onClose, onFinish }) => {
-  const logContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (logContainerRef.current) {
-      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-    }
-  }, [logs]);
-
-  const modalRoot = document.getElementById('modal-root');
-  if (!isOpen || !modalRoot) return null;
-
-  return ReactDOM.createPortal(
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-      <motion.div
-        className="bg-primary-light rounded-lg shadow-xl w-full max-w-3xl border border-primary flex flex-col"
-        style={{ height: '70vh' }}
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-      >
-        <header className="p-4 border-b border-primary flex-shrink-0">
-          <h2 className="text-xl font-bold text-gray-100">Creating Container...</h2>
-        </header>
-        
-        <main ref={logContainerRef} className="overflow-y-auto p-4 font-mono text-sm text-gray-300 flex-grow">
-          <pre className="whitespace-pre-wrap break-words">{logs.join('')}</pre>
-        </main>
-
-        <AnimatePresence>
-          {(success || error) && (
-            <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="flex-shrink-0"
-            >
-              {success && (
-                <div className="m-4 p-4 bg-accent/20 border border-accent/50 text-accent rounded-lg flex items-center gap-3">
-                  <CheckCircleIcon className="w-8 h-8"/>
-                  <div>
-                    <h3 className="font-bold">Success!</h3>
-                    <p>The container was created successfully.</p>
-                  </div>
-                </div>
-              )}
-              {error && (
-                <div className="m-4 p-4 bg-red-900/50 border border-red-700/50 text-red-300 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <ExclamationCircleIcon className="w-8 h-8"/>
-                    <h3 className="font-bold">Creation Failed</h3>
-                  </div>
-                  <pre className="mt-2 font-mono text-xs whitespace-pre-wrap">{error}</pre>
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <footer className="p-4 border-t border-primary flex justify-end gap-4 flex-shrink-0">
-          {isCreating ? (
-            <p className="text-gray-400 text-sm animate-pulse">Creation in progress...</p>
-          ) : (
-            <>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={onClose}
-                className="px-6 py-2 bg-primary text-gray-200 font-semibold rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                {success ? 'Create Another' : 'Close'}
-              </motion.button>
-              {success && (
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={onFinish}
-                  className="px-6 py-2 bg-accent text-charcoal font-semibold rounded-lg hover:bg-accent-light transition-colors"
-                >
-                  Go to My Containers
-                </motion.button>
-              )}
-            </>
-          )}
-        </footer>
-      </motion.div>
-    </div>,
-    modalRoot
-  );
-};
-
-
-// --- Main Page Component ---
 
 const CreateContainer: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setCurrentPage }) => {
   // Image selection state
@@ -164,15 +61,9 @@ const CreateContainer: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ s
     };
     fetchImages();
     
-    // Setup log listener
     window.electronAPI.onCreationLog((log) => {
         setCreationLogs(prev => [...prev, log]);
     });
-    
-    // The listener is registered once when the component mounts.
-    // The electronAPI should ideally provide a cleanup function to remove the listener
-    // to prevent memory leaks if this component were to unmount, but for this app's
-    // structure, it is acceptable.
   }, []);
 
   const resetForm = () => {
@@ -419,13 +310,5 @@ const CreateContainer: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ s
     </div>
   );
 };
-
-
-// --- SVG Icon Components ---
-const MagnifyingGlassIcon: React.FC<{ className?: string }> = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>;
-const PlusIcon: React.FC<{ className?: string }> = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={className}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>;
-const TrashIcon: React.FC<{ className?: string }> = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.134-2.036-2.134H8.716c-1.126 0-2.036.954-2.036 2.134v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>;
-const CheckCircleIcon: React.FC<{ className?: string }> = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const ExclamationCircleIcon: React.FC<{ className?: string }> = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 
 export default CreateContainer;

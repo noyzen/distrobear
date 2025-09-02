@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { LocalImage } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
-import DistroIcon from '../components/DistroLogo';
+import ImageRow from '../components/images/ImageRow';
+import SpinnerIcon from '../components/shared/SpinnerIcon';
+import { MagnifyingGlassIcon, ArrowDownOnSquareIcon, ArrowPathIcon } from '../components/Icons';
 
 // --- Animation Variants ---
 const listContainerVariants = {
@@ -11,168 +13,6 @@ const listContainerVariants = {
     transition: { staggerChildren: 0.05 }
   }
 };
-
-const listItemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: { y: 0, opacity: 1 }
-};
-
-// --- Local Components for LocalImages Page ---
-
-const ConfirmationModal: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  title: string;
-  message: string;
-}> = ({ isOpen, onClose, onConfirm, title, message }) => {
-  useEffect(() => {
-    const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
-  
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <motion.div
-        className="bg-primary-light rounded-lg shadow-xl p-6 w-full max-w-md border border-primary"
-        onClick={e => e.stopPropagation()}
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-      >
-        <div className="flex items-start gap-4">
-            <div className="w-8 h-8 text-red-500 flex-shrink-0 mt-1"><ExclamationTriangleIcon /></div>
-            <div>
-                <h2 className="text-2xl font-bold text-gray-100">{title}</h2>
-                <p className="text-gray-400 mt-4">{message}</p>
-            </div>
-        </div>
-        <div className="flex justify-end gap-4 mt-8">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={onClose}
-            className="px-6 py-2 bg-primary text-gray-200 font-semibold rounded-lg hover:bg-gray-600 transition-colors"
-          >
-            Cancel
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => { onConfirm(); onClose(); }}
-            className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition-colors flex items-center justify-center gap-2"
-          >
-            <TrashIcon /> Delete
-          </motion.button>
-        </div>
-      </motion.div>
-    </div>
-  );
-};
-
-const ImageRow: React.FC<{
-  image: LocalImage;
-  onActionComplete: () => void;
-  onActionStart: () => void;
-  onActionError: (error: string) => void;
-}> = ({ image, onActionComplete, onActionStart, onActionError }) => {
-  const [isProcessing, setIsProcessing] = useState< 'delete' | 'export' | null>(null);
-  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
-  const imageIdentifier = `${image.repository}:${image.tag}`;
-
-  const handleDelete = async () => {
-    setIsProcessing('delete');
-    onActionStart();
-    try {
-      await window.electronAPI.imageDelete(imageIdentifier);
-      onActionComplete();
-    } catch (err) {
-      onActionError(err instanceof Error ? err.message : "An unknown error occurred.");
-    } finally {
-      setIsProcessing(null);
-    }
-  };
-
-  const handleExport = async () => {
-    setIsProcessing('export');
-    onActionStart();
-    try {
-        const result = await window.electronAPI.imageExport(imageIdentifier);
-        if (result.success) {
-            onActionComplete(); // Refresh is handled by parent, we just signal completion.
-        } else {
-            // User cancellation is not an error, so we don't show an error message.
-            if (result.message && !result.message.includes('canceled')) {
-                onActionError(result.message);
-            }
-        }
-    } catch (err) {
-        onActionError(err instanceof Error ? err.message : "An unknown error occurred.");
-    } finally {
-        setIsProcessing(null);
-    }
-  };
-
-
-  return (
-    <>
-      <motion.div
-        layout="position"
-        variants={listItemVariants}
-        className="grid grid-cols-12 items-center p-4 border-b border-primary-light transition-colors duration-200 hover:bg-primary-light/50 gap-4"
-      >
-        <div className="col-span-12 md:col-span-5 min-w-0 flex items-center gap-3">
-          <DistroIcon identifier={image.repository} className="w-10 h-10 flex-shrink-0" />
-          <div className="min-w-0">
-            <p className="font-bold text-gray-100 truncate" title={imageIdentifier}>{image.repository}:{image.tag}</p>
-            <p className="text-xs text-gray-400 mt-1 truncate" title={image.id}>ID: {image.id.substring(0, 12)}</p>
-          </div>
-        </div>
-        <div className="col-span-4 md:col-span-2 text-sm text-gray-300">{image.size}</div>
-        <div className="col-span-8 md:col-span-2 text-sm text-gray-400">{image.created}</div>
-        <div className="col-span-12 md:col-span-3 flex justify-end gap-2">
-            <motion.button 
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={handleExport}
-                disabled={!!isProcessing}
-                className="p-2 text-gray-300 rounded-md hover:bg-blue-600 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Export image to .tar">
-                {isProcessing === 'export' ? <SpinnerIcon className="w-5 h-5"/> : <ArrowUpOnSquareIcon />}
-            </motion.button>
-             <motion.button 
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setDeleteModalOpen(true)}
-                disabled={!!isProcessing}
-                className="p-2 text-gray-300 rounded-md hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Delete image">
-                {isProcessing === 'delete' ? <SpinnerIcon className="w-5 h-5"/> : <TrashIcon />}
-            </motion.button>
-        </div>
-      </motion.div>
-       <AnimatePresence>
-        {isDeleteModalOpen && (
-            <ConfirmationModal
-                isOpen={isDeleteModalOpen}
-                onClose={() => setDeleteModalOpen(false)}
-                onConfirm={handleDelete}
-                title={`Delete Image?`}
-                message={`Are you sure you want to permanently delete "${imageIdentifier}"? This cannot be undone.`}
-            />
-        )}
-      </AnimatePresence>
-    </>
-  );
-};
-
-
-// --- Main Page Component ---
 
 const LocalImages: React.FC = () => {
   const [images, setImages] = useState<LocalImage[]>([]);
@@ -322,7 +162,7 @@ const LocalImages: React.FC = () => {
                 disabled={isLoading || isRefreshing || isImporting}
                 className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-primary-light text-gray-200 font-semibold rounded-lg hover:bg-accent hover:text-charcoal transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-                {isImporting ? <SpinnerIcon className="w-5 h-5"/> : <ArrowDownOnSquareIcon />}
+                {isImporting ? <SpinnerIcon /> : <ArrowDownOnSquareIcon />}
                 Import
             </motion.button>
             <motion.button
@@ -332,7 +172,7 @@ const LocalImages: React.FC = () => {
                 disabled={isLoading || isRefreshing}
                 className="flex-1 sm:flex-none px-5 py-2 bg-accent text-charcoal font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
             >
-                {isRefreshing ? <SpinnerIcon className="w-5 h-5"/> : <ArrowPathIcon />}
+                {isRefreshing ? <SpinnerIcon /> : <ArrowPathIcon />}
                 {isRefreshing ? 'Refreshing...' : 'Refresh'}
             </motion.button>
           </div>
@@ -349,14 +189,5 @@ const LocalImages: React.FC = () => {
     </div>
   );
 };
-
-// --- SVG Icons ---
-const MagnifyingGlassIcon: React.FC<{ className?: string }> = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>;
-const SpinnerIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) => <svg className={`animate-spin text-current ${className}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
-const ArrowUpOnSquareIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>;
-const ArrowDownOnSquareIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>;
-const TrashIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.134-2.036-2.134H8.716c-1.126 0-2.036.954-2.036 2.134v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>;
-const ArrowPathIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12c0 4.142-3.358 7.5-7.5 7.5S4.5 16.142 4.5 12 7.858 4.5 12 4.5c2.36 0 4.471.956 6.012 2.502m1.488-2.492v4.98h-4.98" /></svg>;
-const ExclamationTriangleIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>;
 
 export default LocalImages;

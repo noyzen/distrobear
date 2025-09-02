@@ -2,7 +2,7 @@
   "name": "distrobear",
   "version": "1.0.0",
   "description": "A GUI to manage distrobox containers",
-  "main": "electron-main.js",
+  "main": "electron/main.js",
   "homepage": "./",
   "scripts": {
     "react:dev": "vite",
@@ -36,7 +36,7 @@
     "productName": "DistroBear",
     "files": [
       "dist/**/*",
-      "electron-main.js",
+      "electron",
       "electron-preload.js"
     ],
     "directories": {

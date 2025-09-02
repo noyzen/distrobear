@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import ReactDOM from 'react-dom';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DistroIcon from '../components/DistroLogo';
+import PullModal from '../components/download-images/PullModal';
+import { ArrowDownTrayIcon, MagnifyingGlassIcon } from '../components/Icons';
 
 // --- Animation Variants ---
 const gridItemVariants = {
@@ -9,106 +10,7 @@ const gridItemVariants = {
   visible: { scale: 1, opacity: 1 }
 };
 
-// --- Helper Components & Icons ---
-
-const PullModal: React.FC<{
-  isOpen: boolean;
-  logs: string[];
-  error: string | null;
-  success: boolean;
-  isPulling: boolean;
-  onClose: () => void;
-  onCancel: () => void;
-}> = ({ isOpen, logs, error, success, isPulling, onClose, onCancel }) => {
-  const logContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (logContainerRef.current) {
-      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-    }
-  }, [logs]);
-
-  const modalRoot = document.getElementById('modal-root');
-  if (!isOpen || !modalRoot) return null;
-
-  return ReactDOM.createPortal(
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-      <motion.div
-        className="bg-primary-light rounded-lg shadow-xl w-full max-w-3xl border border-primary flex flex-col"
-        style={{ height: '70vh' }}
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-      >
-        <header className="p-4 border-b border-primary flex-shrink-0">
-          <h2 className="text-xl font-bold text-gray-100">Downloading Image...</h2>
-        </header>
-        
-        <main ref={logContainerRef} className="overflow-y-auto p-4 font-mono text-sm text-gray-300 flex-grow">
-          <pre className="whitespace-pre-wrap break-words">{logs.join('')}</pre>
-        </main>
-
-        <AnimatePresence>
-          {(success || error) && (
-            <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="flex-shrink-0"
-            >
-              {success && (
-                <div className="m-4 p-4 bg-accent/20 border border-accent/50 text-accent rounded-lg flex items-center gap-3">
-                  <CheckCircleIcon className="w-8 h-8"/>
-                  <div>
-                    <h3 className="font-bold">Success!</h3>
-                    <p>The image was downloaded successfully.</p>
-                  </div>
-                </div>
-              )}
-              {error && (
-                <div className="m-4 p-4 bg-red-900/50 border border-red-700/50 text-red-300 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <ExclamationCircleIcon className="w-8 h-8"/>
-                    <h3 className="font-bold">Download Failed</h3>
-                  </div>
-                  <pre className="mt-2 font-mono text-xs whitespace-pre-wrap">{error}</pre>
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <footer className="p-4 border-t border-primary flex justify-end items-center gap-4 flex-shrink-0">
-          {isPulling ? (
-            <>
-                <p className="text-gray-400 text-sm animate-pulse mr-auto">Download in progress...</p>
-                <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={onCancel}
-                    className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-500 transition-colors"
-                >
-                    Cancel
-                </motion.button>
-            </>
-          ) : (
-             <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={onClose}
-                className="px-6 py-2 bg-primary text-gray-200 font-semibold rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                Close
-              </motion.button>
-          )}
-        </footer>
-      </motion.div>
-    </div>,
-    modalRoot
-  );
-};
-
 // --- Data ---
-
 interface ImageInfo {
   name: string;
   address: string;
@@ -170,8 +72,6 @@ const imageList: ImageCategory[] = [
   ]},
 ];
 
-// --- Main Component ---
-
 const DownloadImages: React.FC = () => {
   const [customImageAddress, setCustomImageAddress] = useState('');
   const [selectedImageAddress, setSelectedImageAddress] = useState<string | null>(null);
@@ -216,7 +116,6 @@ const DownloadImages: React.FC = () => {
   
   const handleCancelPull = async () => {
       await window.electronAPI.imagePullCancel();
-      // The `isPulling` state will be updated in the `handlePullImage`'s finally block.
   };
   
   const filteredImageList = useMemo(() => {
@@ -262,7 +161,7 @@ const DownloadImages: React.FC = () => {
               disabled={!customImageAddress || isPulling}
               className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-2 bg-accent text-charcoal font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200"
             >
-              <ArrowDownTrayIcon />
+              <ArrowDownTrayIcon className="w-5 h-5" />
               Download
             </motion.button>
           </div>
@@ -337,11 +236,5 @@ const DownloadImages: React.FC = () => {
     </div>
   );
 };
-
-// --- SVG Icon Components ---
-const ArrowDownTrayIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>;
-const CheckCircleIcon: React.FC<{className?: string}> = ({ className = "w-6 h-6" }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const ExclamationCircleIcon: React.FC<{className?: string}> = ({ className = "w-6 h-6" }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const MagnifyingGlassIcon: React.FC<{ className?: string }> = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>;
 
 export default DownloadImages;

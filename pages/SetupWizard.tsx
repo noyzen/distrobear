@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { DependencyCheckResult, DependencyStatus } from '../types';
 import { motion } from 'framer-motion';
+import { CheckCircleIcon, ExclamationTriangleIcon } from '../components/Icons';
 
 interface SetupWizardProps {
   setupInfo: DependencyCheckResult;
@@ -14,12 +15,12 @@ const DependencyItem: React.FC<{ status: DependencyStatus }> = ({ status }) => {
       <span className="font-semibold text-lg capitalize">{status.name}</span>
       {status.isInstalled ? (
         <div className="flex items-center text-accent">
-          <CheckCircleIcon />
+          <CheckCircleIcon className="w-6 h-6" />
           <span className="ml-2">Installed</span>
         </div>
       ) : (
         <div className="flex items-center text-yellow-400">
-          <ExclamationTriangleIcon />
+          <ExclamationTriangleIcon className="w-6 h-6" />
           <span className="ml-2">Missing</span>
         </div>
       )}
@@ -132,9 +133,5 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ setupInfo, onSetupComplete, o
     </div>
   );
 };
-
-// --- SVG Icon Components ---
-const CheckCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const ExclamationTriangleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>;
 
 export default SetupWizard;
