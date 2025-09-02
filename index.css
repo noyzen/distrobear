@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Required for transparent window with rounded corners */
+/* Required for transparent window */
 body {
   background: transparent;
 }

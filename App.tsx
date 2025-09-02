@@ -121,7 +121,7 @@ const App: React.FC = () => {
 
   return (
     <div className={`flex flex-col h-screen bg-primary font-sans overflow-hidden shadow-2xl ${
-      !isMaximized ? 'border border-primary-light rounded-lg' : ''
+      !isMaximized ? 'border border-primary-light' : ''
     }`}>
       <TitleBar isMaximized={isMaximized} />
       {renderAppStateContent()}
