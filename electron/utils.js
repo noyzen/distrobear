@@ -5,7 +5,7 @@ const path = require('path');
 
 // --- LOGGER ---
 let logStore = [];
-const MAX_LOGS = 200;
+const MAX_LOGS = 2000;
 let logWindow = null;
 
 function setMainWindowForLogger(win) {

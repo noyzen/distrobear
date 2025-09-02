@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import type { ExportableApplication, Container, LogEntry } from '../types';
+import type { ExportableApplication, Container } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import ToggleSwitch from '../components/ToggleSwitch';
 import ApplicationRow from '../components/applications/ApplicationRow';
 import StartContainersModal from '../components/applications/StartContainersModal';
 import SpinnerIcon from '../components/shared/SpinnerIcon';
-import { MagnifyingGlassIcon, ArrowPathIcon, ChevronDownIcon, CommandLineIcon, TrashIcon } from '../components/Icons';
+import { MagnifyingGlassIcon, ArrowPathIcon, ChevronDownIcon } from '../components/Icons';
 
 const listContainerVariants = {
   hidden: { opacity: 1 },
@@ -35,11 +35,6 @@ const Applications: React.FC = () => {
   // Start container modal state
   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
   const [containersToStart, setContainersToStart] = useState<string[]>([]);
-  
-  // Log state
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [isLogVisible, setIsLogVisible] = useState(false);
-  const logContainerRef = useRef<HTMLDivElement>(null);
 
   const fetchAllData = async (isRefresh = false) => {
     if (isRefresh) setIsRefreshing(true); else setIsLoading(true);
@@ -62,20 +57,6 @@ const Applications: React.FC = () => {
 
   useEffect(() => {
     fetchAllData();
-
-    const fetchLogs = async () => {
-        const initialLogs = await window.electronAPI.getInitialLogs();
-        setLogs(initialLogs);
-    };
-    fetchLogs();
-
-    const removeListener = window.electronAPI.onLogEntry((log) => {
-        setLogs(prev => [...prev, log]);
-    });
-    
-    // The IPC listener setup for onLogEntry doesn't return a cleanup function,
-    // so we just set it up once. If it did, we'd return `removeListener` here.
-
   }, []);
 
   useEffect(() => {
@@ -90,18 +71,6 @@ const Applications: React.FC = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
-  useEffect(() => {
-    if (isLogVisible && logContainerRef.current) {
-      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-    }
-  }, [logs, isLogVisible]);
-
-  const handleClearLogs = async () => {
-    await window.electronAPI.clearLogs();
-    const initialLogs = await window.electronAPI.getInitialLogs();
-    setLogs(initialLogs);
-  };
   
   const handleContainerFilterChange = (containerName: string, isChecked: boolean) => {
       const isRunning = !unscannedContainers.includes(containerName);
@@ -203,7 +172,7 @@ const Applications: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto pb-12">
+    <div className="container mx-auto">
       <header className="flex flex-col mb-6 gap-4">
         <div className="flex flex-wrap justify-between items-center gap-4">
             <h1 className="text-3xl font-bold text-gray-100 w-full md:w-auto">Applications</h1>
@@ -283,51 +252,6 @@ const Applications: React.FC = () => {
         onConfirm={handleConfirmStartContainers}
         containersToStart={containersToStart}
       />
-
-      {/* Log Panel */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 md:left-[256px]">
-          <div className="container mx-auto px-4 md:px-8">
-              <button
-                  onClick={() => setIsLogVisible(!isLogVisible)}
-                  className="w-full bg-primary-dark p-2 rounded-t-lg text-gray-300 hover:text-white flex items-center justify-center gap-2 text-sm font-semibold"
-              >
-                  <CommandLineIcon className="w-5 h-5"/>
-                  {isLogVisible ? 'Hide' : 'Show'} Terminal Logs
-                  <ChevronDownIcon isOpen={isLogVisible} className="w-4 h-4" />
-              </button>
-              <AnimatePresence>
-                  {isLogVisible && (
-                      <motion.div
-                          initial={{ height: 0 }}
-                          animate={{ height: '40vh' }}
-                          exit={{ height: 0 }}
-                          transition={{ type: 'tween', duration: 0.3 }}
-                          className="bg-charcoal border-x-2 border-primary-dark overflow-hidden flex flex-col"
-                      >
-                          <div className="flex justify-between items-center p-2 bg-primary-dark flex-shrink-0">
-                              <h3 className="font-bold text-gray-200">Backend Logs</h3>
-                              <button onClick={handleClearLogs} className="flex items-center gap-1 text-xs text-red-400 hover:underline">
-                                  <TrashIcon className="w-4 h-4"/> Clear
-                              </button>
-                          </div>
-                          <div ref={logContainerRef} className="overflow-y-auto p-2 font-mono text-xs flex-grow">
-                              {logs.map((log, i) => (
-                                  <div key={i} className={`whitespace-pre-wrap break-words border-l-2 pl-2 mb-1 ${
-                                      log.level === 'ERROR' ? 'border-red-500 text-red-300' : 
-                                      log.level === 'WARN' ? 'border-yellow-500 text-yellow-300' :
-                                      'border-gray-600 text-gray-400'
-                                  }`}>
-                                      <span className="text-gray-500">{new Date(log.timestamp).toLocaleTimeString()} [{log.level}]</span> {log.message}
-                                      {log.details && <div className="text-gray-500 pl-2 opacity-80">{log.details}</div>}
-                                  </div>
-                              ))}
-                              {logs.length === 0 && <p className="text-gray-500">No logs yet...</p>}
-                          </div>
-                      </motion.div>
-                  )}
-              </AnimatePresence>
-          </div>
-      </div>
     </div>
   );
 };

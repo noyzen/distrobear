@@ -8,6 +8,8 @@ import SetupWizard from './pages/SetupWizard';
 import CreateContainer from './pages/CreateContainer';
 import LocalImages from './pages/LocalImages';
 import DownloadImages from './pages/DownloadImages';
+import Logs from './pages/Logs';
+import Help from './pages/Help';
 import type { Page, DependencyCheckResult } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -60,6 +62,10 @@ const App: React.FC = () => {
         return <LocalImages />;
       case 'download-images':
         return <DownloadImages />;
+      case 'logs':
+        return <Logs />;
+      case 'help':
+        return <Help />;
       default:
         return <MyContainers setCurrentPage={setCurrentPage} />;
     }

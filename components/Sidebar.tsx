@@ -10,7 +10,9 @@ import {
     ArrowDownTrayIcon, 
     CpuChipIcon,
     Bars3Icon,
-    XMarkIcon
+    XMarkIcon,
+    CommandLineIcon,
+    QuestionMarkCircleIcon
 } from './Icons';
 
 interface SidebarProps {
@@ -57,6 +59,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, isOpen, 
     { page: 'local-images' as Page, label: 'Local Images', icon: <ArchiveBoxIcon /> },
     { page: 'download-images' as Page, label: 'Download Images', icon: <ArrowDownTrayIcon /> },
     { page: 'system-info' as Page, label: 'System & Info', icon: <CpuChipIcon /> },
+    { page: 'logs' as Page, label: 'Logs', icon: <CommandLineIcon /> },
+    { page: 'help' as Page, label: 'Help', icon: <QuestionMarkCircleIcon /> },
   ];
 
   return (

@@ -136,4 +136,4 @@ declare global {
   }
 }
 
-export type Page = 'my-containers' | 'create-new' | 'applications' | 'local-images' | 'download-images' | 'system-info';
+export type Page = 'my-containers' | 'create-new' | 'applications' | 'local-images' | 'download-images' | 'system-info' | 'logs' | 'help';
