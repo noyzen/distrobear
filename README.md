@@ -29,12 +29,6 @@ DistroBear simplifies the management of `distrobox` containers by providing an i
 
 ---
 
-## 📸 Screenshots
-
-![DistroBear Main Interface](./screenshot1.jpg)
-
----
-
 ## 🚀 Installation
 
 The easiest way to get started is by downloading the latest `AppImage` from the [GitHub Releases](https://github.com/noyzen/distrobear/releases) page.
