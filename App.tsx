@@ -65,11 +65,11 @@ const App: React.FC = () => {
     }
   };
 
-  const renderContent = () => {
+  const renderAppStateContent = () => {
     switch (appState) {
       case 'checking':
         return (
-          <div className="flex items-center justify-center h-screen bg-charcoal">
+          <div className="flex items-center justify-center h-full">
             <h1 className="text-2xl text-gray-400 animate-pulse">Checking system setup...</h1>
           </div>
         );
@@ -77,8 +77,6 @@ const App: React.FC = () => {
         return <SetupWizard setupInfo={setupInfo!} onSetupComplete={performDependencyCheck} onSkip={handleSkipSetup} />;
       case 'ready':
         return (
-          <div className="flex flex-col h-screen bg-charcoal font-sans rounded-lg overflow-hidden shadow-2xl">
-            <TitleBar />
             <div className="flex flex-1 h-full overflow-hidden">
               <Sidebar 
                 currentPage={currentPage} 
@@ -102,14 +100,18 @@ const App: React.FC = () => {
                 </AnimatePresence>
               </main>
             </div>
-          </div>
         );
       default:
         return null;
     }
   }
 
-  return <>{renderContent()}</>;
+  return (
+    <div className="flex flex-col h-screen bg-charcoal font-sans rounded-lg overflow-hidden shadow-2xl">
+      <TitleBar />
+      {renderAppStateContent()}
+    </div>
+  );
 };
 
 export default App;

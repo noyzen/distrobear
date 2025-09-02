@@ -93,7 +93,7 @@ const ContainerInfoModal: React.FC<{
                         <DetailItem label="Backend" value={info.backend} isCode />
                         <DetailItem label="PID" value={info.pid > 0 ? info.pid : 'N/A'} />
                         <DetailItem label="Created" value={new Date(info.created).toLocaleString()} />
-                        <DetailItem label="Size" value={info.size} />
+                        {info.size && info.size !== 'N/A' && <DetailItem label="Size" value={info.size} />}
                     </section>
                      <section>
                         <h3 className="text-lg font-semibold text-gray-300 border-b border-primary pb-2 mb-2">Configuration</h3>
@@ -114,7 +114,7 @@ const ContainerInfoModal: React.FC<{
                     </section>
                     <section>
                         <h3 className="text-lg font-semibold text-gray-300 border-b border-primary pb-2 mb-2">Mounted Volumes</h3>
-                         <div className="text-xs text-gray-200 font-mono bg-primary-dark/50 rounded-lg p-3 h-40 overflow-y-auto">
+                         <div className="text-xs text-gray-200 font-mono bg-primary-dark/50 rounded-lg p-3 h-48 overflow-y-auto">
                             {info.volumes && info.volumes.length > 0 ? (
                                 <ul className="space-y-1">
                                     {info.volumes.map((vol, i) => <li key={i}>{vol}</li>)}
@@ -464,7 +464,7 @@ const ContainerRow: React.FC<{
         className={`
             relative
             ${ isSelected
-                ? 'z-10 my-1 bg-primary-light rounded-lg border border-accent/30 shadow-[0_0_15px_rgba(52,211,153,0.3)]'
+                ? 'z-10 my-1 bg-primary-light rounded-lg border-2 border-accent/70 shadow-[0_0_15px_rgba(52,211,153,0.3)]'
                 : `z-0 border-b ${isLast ? 'border-transparent' : 'border-primary-light'}`
             }
         `}
@@ -569,7 +569,7 @@ const ContainerRow: React.FC<{
                         </motion.button>
                     </div>
                      {!isUp && (
-                        <p className="text-xs text-yellow-500 text-right mt-1">
+                        <p className="text-xs text-gray-400 text-right mt-1">
                             Container must be running to save as an image.
                         </p>
                     )}

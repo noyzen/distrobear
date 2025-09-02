@@ -64,7 +64,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ setupInfo, onSetupComplete, o
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-charcoal p-8">
+    <div className="flex flex-col items-center justify-center h-full p-8">
       <motion.div 
         className="w-full max-w-3xl bg-primary rounded-xl shadow-2xl p-8 space-y-6"
         initial={{ opacity: 0, y: 20 }}
