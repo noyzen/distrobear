@@ -3,7 +3,7 @@ const os = require('os');
 const path = require('path');
 const fs = require('fs').promises;
 const { spawn } = require('child_process');
-const { runCommand, runCommandStreamed, getContainerRuntime, isSystemdServiceEnabled, detectTerminalEmulator, logInfo, logWarn } = require('../utils');
+const { runCommand, runCommandStreamed, getContainerRuntime, isSystemdServiceEnabled, detectTerminalEmulator, logInfo, logWarn, logError } = require('../utils');
 
 function registerContainerHandlers(mainWindow) {
     ipcMain.handle('list-containers', async () => {
@@ -283,6 +283,7 @@ function registerContainerHandlers(mainWindow) {
             logToFrontend(`\n--- Container "${sanitizedName}" created successfully! ---\n`);
         } catch (err) {
             logToFrontend(`\n--- ERROR: Failed to create container: ${err.message} ---\n`);
+            logError(`Container creation failed for "${sanitizedName}"`, err.message);
             throw err;
         }
     });

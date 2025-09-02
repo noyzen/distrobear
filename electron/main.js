@@ -65,8 +65,8 @@ function registerIpcHandlers() {
 
 
 app.whenReady().then(() => {
-  registerIpcHandlers();
   createWindow();
+  registerIpcHandlers();
   
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
