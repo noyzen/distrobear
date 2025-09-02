@@ -1,35 +1,23 @@
 import React from 'react';
 
 const Logo: React.FC<{ className?: string }> = ({ className }) => (
-  <svg 
-    className={className}
-    viewBox="0 0 100 100" 
-    xmlns="http://www.w3.org/2000/svg" 
-    aria-label="DistroBear Logo"
-  >
-    {/* Hexagon Outline */}
-    <path 
-      d="M 50,5 L 95,27.5 L 95,72.5 L 50,95 L 5,72.5 L 5,27.5 Z" 
-      stroke="currentColor" 
-      className="text-primary-light"
-      fill="none" 
-      strokeWidth="5" 
-    />
-    
-    {/* Stacked containers inside */}
-    <g 
-      className="text-accent" 
-      stroke="currentColor" 
-      fill="none" 
-      strokeWidth="5" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
+    <svg 
+        className={className}
+        viewBox="0 0 24 24" 
+        xmlns="http://www.w3.org/2000/svg" 
+        aria-label="DistroBear Logo"
+        fill="currentColor"
     >
-      <rect x="25" y="60" width="50" height="15" rx="2"/>
-      <rect x="25" y="42" width="50" height="15" rx="2"/>
-      <rect x="25" y="24" width="50" height="15" rx="2"/>
-    </g>
-  </svg>
+        <g className="text-primary-light">
+            <path d="M17.19,13.518c-0.184-2.583-2.012-4.99-4.321-5.91c-0.002-0.001-0.003-0.001-0.005-0.002 c-1.636-0.65-3.134-0.632-4.428,0.051C6.096,8.541,4.28,10.89,4.106,13.454C4.088,13.688,4.073,13.916,4.06,14.136 c-0.038,0.64,0.09,1.332,0.366,2.028c0.05,0.126,0.1,0.25,0.153,0.372c0.354,0.816,0.88,1.554,1.545,2.16 L9.5,22l3.172-3.24c0.665-0.606,1.191-1.344,1.545-2.16c0.053-0.122,0.103-0.246,0.153-0.372 c0.276-0.696,0.404-1.388,0.366-2.028C14.519,13.916,14.504,13.688,14.486,13.454V13.518z" />
+            <circle cx="5.5" cy="7.5" r="3.5" />
+            <circle cx="18.5" cy="7.5" r="3.5" />
+        </g>
+        <path 
+            className="text-accent"
+            d="M12,18.5c-1.381,0-2.5-1.119-2.5-2.5s1.119-2.5,2.5-2.5s2.5,1.119,2.5,2.5S13.381,18.5,12,18.5z M12,14.5 c-0.828,0-1.5,0.672-1.5,1.5s0.672,1.5,1.5,1.5s1.5-0.672,1.5-1.5S12.828,14.5,12,14.5z" 
+        />
+    </svg>
 );
 
 export default Logo;

@@ -4,6 +4,49 @@ const path = require('path');
 const fs = require('fs').promises;
 const { runCommand } = require('../utils');
 
+
+/**
+ * Scans the host's application directory to find all .desktop files that
+ * have been exported by distrobox.
+ * @returns {Promise<Map<string, Set<string>>>} A promise that resolves to a map where the key is the
+ * container name and the value is a Set of .desktop filenames (e.g., 'firefox.desktop').
+ */
+async function getHostExportedApps() {
+    const exportedApps = new Map();
+    const hostAppDir = path.join(os.homedir(), '.local', 'share', 'applications');
+
+    try {
+        const files = await fs.readdir(hostAppDir);
+        for (const file of files) {
+            if (!file.endsWith('.desktop')) continue;
+
+            const filePath = path.join(hostAppDir, file);
+            try {
+                const content = await fs.readFile(filePath, 'utf-8');
+                // Regex to find the line `X-Distrobox-Container=container-name`
+                const match = content.match(/^X-Distrobox-Container=(.*)$/m);
+                if (match && match[1]) {
+                    const containerName = match[1].trim();
+                    if (!exportedApps.has(containerName)) {
+                        exportedApps.set(containerName, new Set());
+                    }
+                    exportedApps.get(containerName).add(file);
+                }
+            } catch (e) {
+                // Silently ignore errors reading individual files (e.g., permission issues)
+                console.warn(`[WARN] Could not read or parse host app file: ${filePath}`);
+            }
+        }
+    } catch (e) {
+        if (e.code !== 'ENOENT') {
+            console.error(`[ERROR] Could not read host application directory: ${hostAppDir}`, e);
+        }
+        // If the directory doesn't exist, it's not an error, just return the empty map.
+    }
+    
+    return exportedApps;
+}
+
 function registerApplicationHandlers(mainWindow) {
     ipcMain.handle('list-applications', async () => {
         // 1. Get all containers to determine which are running and which are not.
@@ -20,26 +63,10 @@ function registerApplicationHandlers(mainWindow) {
             return { applications: [], unscannedContainers };
         }
         
-        // 2. For each running container, get a list of its exported applications using the
-        //    reliable `distrobox-export --list-apps` command. This is the correct way.
-        const exportedAppsByContainer = new Map();
-        await Promise.all(runningContainers.map(async ({ name: containerName }) => {
-            try {
-                const listAppsOutput = await runCommand(
-                    'distrobox', 
-                    ['enter', containerName, '--', 'distrobox-export', '--list-apps'],
-                    { supressErrorLoggingForExitCodes: [1] } 
-                ).catch(() => ''); // Gracefully handle errors as "no apps exported"
-                
-                const exportedAppIdentifiers = new Set(listAppsOutput.split('\n').filter(Boolean));
-                exportedAppsByContainer.set(containerName, exportedAppIdentifiers);
-            } catch (e) {
-                console.warn(`[WARN] Could not list exported apps for ${containerName}: ${e.message}`);
-                exportedAppsByContainer.set(containerName, new Set()); // Ensure an entry exists
-            }
-        }));
-
-        // 3. Map over ONLY running containers to find all available apps and check their status
+        // 2. Get a definitive list of exported apps by scanning the host filesystem. This is more reliable.
+        const hostExportedApps = await getHostExportedApps();
+        
+        // 3. Map over ONLY running containers to find all available apps and check their status.
         const allAppsPromises = runningContainers.map(async ({ name: containerName }) => {
             try {
                 // Find all potential .desktop files within the container.
@@ -48,16 +75,15 @@ function registerApplicationHandlers(mainWindow) {
                 if (!findOutput) return [];
                 const desktopFiles = findOutput.split('\n').filter(Boolean);
 
-                const exportedAppSet = exportedAppsByContainer.get(containerName) || new Set();
+                const containerExportedAppsSet = hostExportedApps.get(containerName) || new Set();
 
-                // For each file, get its details and check against our set of exported apps.
+                // For each file, get its details and check against our map of exported apps.
                 const appDetailsPromises = desktopFiles.map(async (desktopFile) => {
                     try {
                         const appName = path.basename(desktopFile); // e.g., 'firefox.desktop'
-                        const appIdentifier = appName.replace(/\.desktop$/, '');
 
-                        // Determine if exported by checking the reliable set we built.
-                        const isExported = exportedAppSet.has(appIdentifier);
+                        // Determine if exported by checking the reliable map we built from the host.
+                        const isExported = containerExportedAppsSet.has(appName);
                         
                         // Get the display name from inside the container.
                         const escapedFile = `'${desktopFile.replace(/'/g, "'\\''")}'`;
@@ -70,7 +96,7 @@ function registerApplicationHandlers(mainWindow) {
                             .then(() => true)
                             .catch(() => false);
 
-                        // Filter out hidden apps, apps without a name, or Wayland-specific entries we don't want.
+                        // Filter out hidden apps, apps without a name, or Wayland-specific entries.
                         if (!displayName || isHidden || displayName.toLowerCase().includes('wayland')) {
                             return null;
                         }
@@ -87,18 +113,16 @@ function registerApplicationHandlers(mainWindow) {
                     }
                 });
 
-                // Wait for all checks to complete and filter out any nulls from failed/skipped apps.
                 return (await Promise.all(appDetailsPromises)).filter(Boolean);
             } catch (e) {
                 console.error(`Error listing applications for container ${containerName}: ${e.message}`);
-                return []; // Return empty array for this container if a major error occurs.
+                return [];
             }
         });
 
         const nestedApps = await Promise.all(allAppsPromises);
         const applications = nestedApps.flat().sort((a, b) => a.name.localeCompare(b.name));
 
-        // 4. Return the final payload
         return { applications, unscannedContainers };
     });
 
