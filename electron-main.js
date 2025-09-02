@@ -717,12 +717,51 @@ ipcMain.handle('image-delete', async (event, imageIdentifier) => {
   if (!sanitizedIdentifier) {
     throw new Error('Invalid image identifier provided.');
   }
+  
   try {
     const runtime = await getContainerRuntime();
-    // Use --force to remove images even if they are used by stopped containers.
-    // This is generally safe and expected behavior for a GUI management tool.
+
+    // 1. Get the full ID of the image to be deleted.
+    // This provides a canonical ID to check against containers.
+    let targetImageId;
+    try {
+      const inspectOutput = await runCommand(runtime, ['inspect', sanitizedIdentifier]);
+      const imageData = JSON.parse(inspectOutput)[0];
+      targetImageId = imageData.Id;
+    } catch (e) {
+      // If inspect fails, maybe the image doesn't exist. Let `rmi` handle it,
+      // as it will produce a more accurate "no such image" error.
+      console.warn(`[WARN] Could not inspect image "${sanitizedIdentifier}", proceeding with deletion attempt. Error: ${e.message}`);
+      await runCommand(runtime, ['rmi', '--force', sanitizedIdentifier]);
+      return; // Deletion (or failure) handled, so we can exit.
+    }
+
+    // 2. Get all containers (running and stopped) and their image IDs.
+    const psOutput = await runCommand(runtime, ['ps', '-a', '--format', '{{.Names}}\t{{.ImageID}}']);
+    
+    // 3. Find containers that are using this specific image ID.
+    const containersInUse = psOutput
+      .split('\n')
+      .filter(line => line.trim())
+      .map(line => {
+        const [name, imageId] = line.split('\t');
+        return { name, imageId };
+      })
+      .filter(container => targetImageId.startsWith(container.imageId));
+
+    // 4. If any containers are using the image, throw a user-friendly error.
+    if (containersInUse.length > 0) {
+      const containerNames = containersInUse.map(c => `"${c.name}"`).join(', ');
+      // This specific error message is caught by the frontend and displayed to the user.
+      throw new Error(`Cannot delete image. It is being used by container(s): ${containerNames}.\nPlease delete the container(s) before deleting the image.`);
+    }
+
+    // 5. If no containers are using it, proceed with deletion.
+    // Use --force to remove images even if they are used by other (non-container) tags.
     await runCommand(runtime, ['rmi', '--force', sanitizedIdentifier]);
+
   } catch (err) {
+    // The catch block will now handle both the custom error and any other errors from `runCommand`.
     throw new Error(`Failed to delete image "${sanitizedIdentifier}": ${err.message}`);
   }
 });
