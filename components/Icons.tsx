@@ -1,5 +1,4 @@
 import React from 'react';
-// FIX: Import motion from framer-motion to be used for animations.
 import { motion } from 'framer-motion';
 
 export interface IconProps {
