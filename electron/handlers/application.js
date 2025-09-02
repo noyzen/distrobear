@@ -19,23 +19,6 @@ function registerApplicationHandlers(mainWindow) {
             return { applications: [], unscannedContainers };
         }
         
-        const exportedAppsByContainer = new Map();
-        await Promise.all(runningContainers.map(async ({ name: containerName }) => {
-            try {
-                const listAppsOutput = await runCommand(
-                    'distrobox', 
-                    ['enter', containerName, '--', 'distrobox-export', '--list-apps'],
-                    { supressErrorLoggingForExitCodes: [1] } 
-                ).catch(() => '');
-                
-                const exportedAppIdentifiers = new Set(listAppsOutput.split('\n').filter(Boolean));
-                exportedAppsByContainer.set(containerName, exportedAppIdentifiers);
-            } catch (e) {
-                console.warn(`[WARN] Could not list exported apps for ${containerName}: ${e.message}`);
-                exportedAppsByContainer.set(containerName, new Set());
-            }
-        }));
-
         const allAppsPromises = runningContainers.map(async ({ name: containerName }) => {
             try {
                 const findCommand = `find /usr/share/applications /usr/local/share/applications ~/.local/share/applications -path '*/.local/share/applications' -prune -o -name "*.desktop" -type f -print 2>/dev/null`;
@@ -43,13 +26,21 @@ function registerApplicationHandlers(mainWindow) {
                 if (!findOutput) return [];
                 const desktopFiles = findOutput.split('\n').filter(Boolean);
 
-                const exportedAppSet = exportedAppsByContainer.get(containerName) || new Set();
-
                 const appDetailsPromises = desktopFiles.map(async (desktopFile) => {
                     try {
                         const appName = path.basename(desktopFile);
-                        const appIdentifier = appName.replace(/\.desktop$/, '');
-                        const isExported = exportedAppSet.has(appIdentifier);
+                        
+                        // New, more reliable check: read the host file system directly
+                        let isExported = false;
+                        const hostAppPath = path.join(os.homedir(), '.local', 'share', 'applications', appName);
+                        try {
+                            const content = await fs.readFile(hostAppPath, 'utf-8');
+                            if (content.includes(`X-Distrobox-Container=${containerName}`)) {
+                                isExported = true;
+                            }
+                        } catch (e) {
+                            // File not found or unreadable, so it's not exported. Ignore error.
+                        }
                         
                         const escapedFile = `'${desktopFile.replace(/'/g, "'\\''")}'`;
                         const getNameCommand = `grep -m 1 '^Name' ${escapedFile} | cut -d'=' -f2-`;
@@ -96,6 +87,20 @@ function registerApplicationHandlers(mainWindow) {
         const appIdentifier = sanitizedApp.replace(/\.desktop$/, '');
         const args = ['enter', sanitizedContainer, '--', 'distrobox-export', '--app', appIdentifier];
         await runCommand('distrobox', args);
+        
+        // Poll to ensure filesystem is consistent before UI refreshes
+        const hostAppPath = path.join(os.homedir(), '.local', 'share', 'applications', sanitizedApp);
+        const expectedContent = `X-Distrobox-Container=${sanitizedContainer}`;
+        for (let i = 0; i < 20; i++) { // Poll for up to 1 second
+            try {
+                const content = await fs.readFile(hostAppPath, 'utf-8');
+                if (content.includes(expectedContent)) {
+                    return; // Success, file is consistent
+                }
+            } catch (e) { /* Ignore */ }
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        console.warn(`[WARN] Polling for ${sanitizedApp} consistency timed out after export.`);
     });
 
     ipcMain.handle('application-unexport', async (event, { containerName, appName }) => {
@@ -106,6 +111,20 @@ function registerApplicationHandlers(mainWindow) {
         const appIdentifier = sanitizedApp.replace(/\.desktop$/, '');
         const args = ['enter', sanitizedContainer, '--', 'distrobox-export', '--app', appIdentifier, '--delete'];
         await runCommand('distrobox', args);
+
+        // Poll to ensure file is deleted before UI refreshes
+        const hostAppPath = path.join(os.homedir(), '.local', 'share', 'applications', sanitizedApp);
+        for (let i = 0; i < 20; i++) {
+            try {
+                await fs.access(hostAppPath); // Throws if file exists
+            } catch (e) {
+                if (e.code === 'ENOENT') {
+                    return; // Success, file is gone
+                }
+            }
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        console.warn(`[WARN] Polling for ${sanitizedApp} deletion timed out after unexport.`);
     });
 }
 

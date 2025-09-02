@@ -6,40 +6,28 @@ const Logo: React.FC<{ className?: string }> = ({ className }) => (
     viewBox="0 0 100 100" 
     xmlns="http://www.w3.org/2000/svg" 
     aria-label="DistroBear Logo"
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="4" 
-    strokeLinecap="round" 
-    strokeLinejoin="round"
   >
-    {/* Hexagon Box */}
+    {/* Hexagon Outline */}
     <path 
       d="M 50,5 L 95,27.5 L 95,72.5 L 50,95 L 5,72.5 L 5,27.5 Z" 
+      stroke="currentColor" 
       className="text-primary-light"
+      fill="none" 
+      strokeWidth="5" 
     />
     
-    {/* Bear Head */}
-    <g transform="translate(50, 52)" className="text-accent">
-      {/* Ears */}
-      <path d="M -18,-18 a 10 10 0 0 1 12 -2" />
-      <path d="M 18,-18 a 10 10 0 0 0 -12 -2" />
-      
-      {/* Head Outline */}
-      <path d="M -25,10 C -30,-15, 30,-15, 25,10 C 20,25, -20,25, -25,10 Z" />
-
-      {/* Muzzle */}
-      <path d="M 0,5 a 8 8 0 0 1 0 10 a 8 8 0 0 1 0 -10" />
-
-      {/* Nose */}
-      <path d="M -4,10 l 4,-4 l 4,4" />
-      
-      {/* Eyes */}
-      <g strokeWidth="3">
-         <path d="M -12,-2 L -8,2" />
-         <path d="M -8,-2 L -12,2" />
-         <path d="M 12,-2 L 8,2" />
-         <path d="M 8,-2 L 12,2" />
-      </g>
+    {/* Stacked containers inside */}
+    <g 
+      className="text-accent" 
+      stroke="currentColor" 
+      fill="none" 
+      strokeWidth="5" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    >
+      <rect x="25" y="60" width="50" height="15" rx="2"/>
+      <rect x="25" y="42" width="50" height="15" rx="2"/>
+      <rect x="25" y="24" width="50" height="15" rx="2"/>
     </g>
   </svg>
 );

@@ -70,10 +70,10 @@ const ApplicationRow: React.FC<ApplicationRowProps> = ({ app, onActionComplete }
                 whileTap={{ scale: 0.95 }}
                 onClick={handleUnshare}
                 disabled={!!processingAction}
-                className="w-36 flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-red-600 text-white hover:bg-red-500 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
-                title={`Remove ${app.name} from the host.`}
+                className="w-32 flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-red-600 text-white hover:bg-red-500 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
+                title={`Unshare ${app.name} from the host.`}
             >
-            {processingAction === 'unshare' ? <SpinnerIcon /> : <><TrashIcon className="w-5 h-5"/> Remove</>}
+            {processingAction === 'unshare' ? <SpinnerIcon /> : <><TrashIcon className="w-5 h-5"/> Unshare</>}
             </motion.button>
         ) : (
             <motion.button
@@ -81,10 +81,10 @@ const ApplicationRow: React.FC<ApplicationRowProps> = ({ app, onActionComplete }
                 whileTap={{ scale: 0.95 }}
                 onClick={handleShare}
                 disabled={!!processingAction}
-                className="w-36 flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-accent text-charcoal hover:bg-accent-light disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
+                className="w-32 flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-accent text-charcoal hover:bg-accent-light disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
                 title={`Share ${app.name} with the host.`}
             >
-            {processingAction === 'share' ? <SpinnerIcon /> : <><ArrowUpOnSquareIcon /> Share to Host</>}
+            {processingAction === 'share' ? <SpinnerIcon /> : <><ArrowUpOnSquareIcon /> Share</>}
             </motion.button>
         )}
       </div>
