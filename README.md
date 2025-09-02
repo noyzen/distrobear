@@ -8,24 +8,30 @@ DistroBear simplifies the management of `distrobox` containers by providing an i
 
 ## ✨ Key Features
 
--   **Container Management**: Easily view, start, stop, and delete your containers.
--   **Detailed Insights**: Inspect containers to see detailed information like resource usage, mounted volumes, and configuration flags.
--   **Effortless Creation**: A step-by-step wizard to create new containers with advanced options like isolated home directories, `init` support, NVIDIA GPU access, and custom volume mounts.
--   **Image Management**:
-    -   List all your local container images.
-    -   Save a running container's state as a new image (commit).
-    -   Import/Export images as `.tar` files.
-    -   Delete unwanted images to free up space.
--   **Discover & Download**: Browse a curated list of popular `distrobox`-compatible images and download them with a single click.
--   **Application Integration**: Discover graphical applications within your containers and seamlessly "export" them to your host's application menu.
--   **System Setup Wizard**: First-time users are guided through an automated installation of `distrobox` and `podman`.
--   **System Information**: A dedicated panel to view system details and versions of your core dependencies.
+-   📦 **Intuitive Container Management**: View, start, stop, delete, and enter your containers with a single click.
+-   ⚙️ **Detailed Container Insights**: Instantly access detailed information, including mounted volumes, resource usage, and configuration flags.
+-   ✨ **Effortless Creation Wizard**: A guided, step-by-step process to create new containers with advanced options:
+    -   🔒 **Isolated Home Directories**: Enhance security by keeping container home directories separate from your host.
+    -   🚀 **Init/Systemd Support**: Run complex services and daemons inside your containers.
+    -   🎮 **NVIDIA GPU Passthrough**: Grant containers access to your NVIDIA GPU for accelerated tasks.
+    -   📁 **Custom Volume Mounts**: Easily share specific project folders between your host and containers.
+-   🖼️ **Comprehensive Image Management**:
+    -   List, search, and manage all your local container images.
+    -   Download new images from a curated list or any public registry.
+    -   Save a configured container's state as a new custom image (commit).
+    -   Backup and share your images by exporting/importing them as `.tar` files.
+-   🖥️ **Seamless Application Integration**:
+    -   Automatically discover graphical applications inside your running containers.
+    -   "Share" (export) applications to your host's main menu, making them feel like native apps.
+-   🔧 **Automated Setup Wizard**: First-time users are guided through an automatic installation of `distrobox` and `podman`.
+-   📊 **System Dashboard**: View key system information, dependency versions, and manage your setup.
+-   📜 **Live Logging & Help**: An integrated logging view for easy troubleshooting and a comprehensive help section to answer common questions.
 
 ---
 
 ## 📸 Screenshots
 
-*(Add screenshots of the main application windows here)*
+![DistroBear Main Interface](./screenshot1.jpg)
 
 ---
 
