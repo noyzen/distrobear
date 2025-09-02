@@ -114,10 +114,11 @@ function runCommandStreamed(command, args = [], onData, onProcess) {
  * @param {string} command The command to execute.
  * @param {string[]} [args=[]] An array of arguments.
  * @param {object} [options={}] Additional options.
+ * @param {boolean} [options.logStdout=true] Whether to log stdout on success.
  * @returns {Promise<string>} A promise that resolves with stdout.
  */
 function runCommand(command, args = [], options = {}) {
-  const { supressErrorLoggingForExitCodes = [] } = options;
+  const { supressErrorLoggingForExitCodes = [], logStdout = true } = options;
   return new Promise((resolve, reject) => {
     const commandString = [command, ...args.map(a => `'${a}'`)].join(' ');
     logInfo(`Executing command:`, `${command} ${args.join(' ')}`);
@@ -139,7 +140,8 @@ function runCommand(command, args = [], options = {}) {
         }
         reject(new Error(fullStderr));
       } else {
-        logInfo(`Command finished successfully: "${commandToRunForLogging}"`, `Stdout:\n${stdout.trim()}`);
+        const details = logStdout ? `Stdout:\n${stdout.trim()}` : `(Stdout suppressed for brevity)`;
+        logInfo(`Command finished successfully: "${commandToRunForLogging}"`, details);
         resolve(stdout.trim());
       }
     });

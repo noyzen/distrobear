@@ -24,7 +24,7 @@ function registerContainerHandlers(mainWindow) {
 
                 let isIsolated = true;
                 try {
-                    const inspectOutput = await runCommand(command, ['inspect', name]);
+                    const inspectOutput = await runCommand(command, ['inspect', name], { logStdout: false });
                     const inspectData = JSON.parse(inspectOutput)[0];
 
                     if (inspectData && Array.isArray(inspectData.Mounts)) {
@@ -169,7 +169,7 @@ function registerContainerHandlers(mainWindow) {
         if (!sanitizedName) throw new Error('Invalid container name provided.');
         try {
             const backendCmd = await getContainerRuntime();
-            const inspectOutput = await runCommand(backendCmd, ['inspect', sanitizedName]);
+            const inspectOutput = await runCommand(backendCmd, ['inspect', sanitizedName], { logStdout: false });
             if (!inspectOutput) throw new Error(`Container "${sanitizedName}" not found by ${backendCmd}.`);
             const inspectData = JSON.parse(inspectOutput)[0];
 

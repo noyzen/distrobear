@@ -35,7 +35,7 @@ function registerImageHandlers(mainWindow) {
             const runtime = await getContainerRuntime();
             let targetImageId;
             try {
-                const inspectOutput = await runCommand(runtime, ['inspect', sanitizedIdentifier]);
+                const inspectOutput = await runCommand(runtime, ['inspect', sanitizedIdentifier], { logStdout: false });
                 targetImageId = JSON.parse(inspectOutput)[0].Id;
             } catch (e) {
                 logWarn(`Could not inspect image "${sanitizedIdentifier}", proceeding with deletion attempt.`, e.message);
