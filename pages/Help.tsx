@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MagnifyingGlassIcon, CubeIcon, PlusCircleIcon, Squares2X2Icon, ArchiveBoxIcon, ExclamationTriangleIcon } from '../components/Icons';
+import { MagnifyingGlassIcon, CubeIcon, PlusCircleIcon, Squares2X2Icon, ArchiveBoxIcon, ExclamationTriangleIcon, CommandLineIcon } from '../components/Icons';
 
 interface HelpTopic {
     title: string;
@@ -15,33 +15,61 @@ interface HelpCategory {
 
 const helpData: HelpCategory[] = [
     {
-        name: "Getting Started",
+        name: "Introduction & Concepts",
         icon: <CubeIcon />,
         topics: [
-            {
-                title: "What is a Container?",
-                content: (
-                    <>
-                        <p>Think of a container as a lightweight, isolated box where you can run a completely separate Linux operating system. It shares your main system's core (the kernel) but has its own files, applications, and libraries.</p>
-                        <p>This is incredibly powerful because it lets you, for example, run an Arch Linux environment on your Fedora machine to test a specific software, without altering your main system. Distrobox makes these "boxes" easy to create and integrate with your desktop.</p>
-                    </>
-                ),
-            },
             {
                 title: "What is DistroBear?",
                 content: (
                     <>
-                        <p>DistroBear is a graphical user interface (GUI) for <strong>Distrobox</strong>. It takes the powerful command-line features of Distrobox and presents them in an intuitive, visual way. Our goal is to make container management accessible to everyone, from beginners to power users.</p>
+                        <p>DistroBear is a graphical user interface (GUI) for <strong>Distrobox</strong>. It takes the powerful command-line features of Distrobox and presents them in an intuitive, visual way.</p>
+                        <p>Our goal is to make managing your development and testing environments easy, fast, and accessible to everyone, from beginners to power users, without needing to memorize commands.</p>
                     </>
                 ),
             },
             {
-                title: "First Launch & Setup",
+                title: "Core Concepts: Containers, Images, and Runtimes",
                 content: (
                     <>
-                        <p>On your first launch, the app checks for its two main dependencies: <strong>Distrobox</strong> itself, and a container runtime like <strong>Podman</strong>. Podman is the engine that actually runs the containers.</p>
-                        <p>If either is missing, the Setup Wizard will appear. It can automatically install them using your system's package manager. This process requires administrator (sudo) privileges because it's installing system-level software.</p>
-                        <p>If the automatic installation fails, you may need to install them manually. For most distributions, you can find them in your software center or install them from a terminal (e.g., <code>sudo apt install podman</code> on Debian/Ubuntu or <code>sudo dnf install podman</code> on Fedora).</p>
+                        <p>To understand DistroBear and Distrobox, it's helpful to know three key terms:</p>
+                        <ul className="list-disc list-inside mt-2 space-y-3">
+                            <li><strong>Image:</strong> An image is a read-only blueprint or template. It contains a complete Linux operating system (like Ubuntu 22.04 or Fedora 40), including all the files, libraries, and tools. You download images from online registries.</li>
+                            <li><strong>Container:</strong> A container is a live, running instance created from an image. Think of it as a lightweight virtual machine. You can start it, stop it, install software inside it, and then delete it when you're done. The changes you make inside a container do not affect the original image.</li>
+                            <li><strong>Runtime:</strong> The runtime is the engine that actually builds, runs, and manages your containers. DistroBear uses <strong>Podman</strong> as its recommended runtime. It's the low-level tool that does the heavy lifting.</li>
+                        </ul>
+                    </>
+                ),
+            },
+            {
+                title: "What is Distrobox?",
+                content: (
+                    <>
+                        <p>Distrobox is a tool that makes it easy to create and manage containers, but with a special focus on deep integration with your host operating system. It sets up containers in a way that allows them to share your home directory, USB devices, graphical applications, and more.</p>
+                        <p>This tight integration is its superpower. An application running inside a Distrobox container can look and feel exactly like a native app on your host system. Distrobox handles all the complex networking and permissions to make this possible.</p>
+                    </>
+                ),
+            },
+            {
+                title: "What is Podman?",
+                content: (
+                    <>
+                        <p>Podman is the container runtime engine that Distrobox uses to do its work. It is a powerful, modern tool for managing containers and images. One of its key features is its <strong>daemonless</strong> architecture.</p>
+                        <p>Unlike Docker, which requires a constantly running background service (a daemon), Podman runs directly as a user process. This is generally considered more secure and lightweight, making it an excellent choice for desktop use.</p>
+                    </>
+                ),
+            },
+        ],
+    },
+    {
+        name: "Getting Started",
+        icon: <CubeIcon />,
+        topics: [
+            {
+                title: "First Launch & Automated Setup",
+                content: (
+                    <>
+                        <p>On your first launch, DistroBear checks for its two main dependencies: <strong>Distrobox</strong> and <strong>Podman</strong>.</p>
+                        <p>If either is missing, the Setup Wizard will appear. It can automatically install them using your system's package manager (like <code>apt</code>, <code>dnf</code>, or <code>pacman</code>). This process requires administrator (sudo) privileges because it's installing system-level software.</p>
                         <p>If you choose to skip the setup, some features may not work. You can always re-run the wizard at any time from the "System & Info" page.</p>
                     </>
                 ),
@@ -49,25 +77,25 @@ const helpData: HelpCategory[] = [
         ],
     },
     {
-        name: "My Containers",
+        name: "Managing Containers",
         icon: <CubeIcon />,
         topics: [
             {
-                title: "The Main Dashboard",
-                content: <p>This page is your central hub. It lists all Distrobox containers on your system, showing their name, the base image they were created from, and their current status. The status indicator on the left gives you a quick visual cue: a pulsing green circle for 'Running', and a hollow grey circle for 'Stopped' or 'Exited'.</p>,
+                title: "The Container Dashboard",
+                content: <p>The "My Containers" page lists all Distrobox containers on your system. It shows their name, base image, and current status. A pulsing green circle means 'Running', while a hollow grey circle means 'Stopped'. You can also see icons indicating if a container has an <strong>Isolated Home</strong> (a shield) or is set to <strong>Autostart</strong> (a lightning bolt).</p>,
             },
             {
                 title: "Container Actions Explained",
                 content: (
                     <>
-                        <p>Click on any container in the list to expand its action panel. Here's what each action does:</p>
+                        <p>Click on any container to expand its action panel. Here's what each action does:</p>
                         <ul className="list-disc list-inside mt-2 space-y-2">
-                            <li><strong>Start/Stop:</strong> Toggles the power state of the container. A container must be running to enter it or use its applications.</li>
-                            <li><strong>Enter:</strong> This is one of the most common actions. It opens a new terminal window with a shell inside the container. This action will automatically start the container if it's stopped. DistroBear will attempt to detect and use your system's default terminal emulator.</li>
-                            <li><strong>Info:</strong> Opens a detailed modal with technical information like the container's unique ID, process ID (PID), all mounted volumes, and configuration flags like NVIDIA or Init support.</li>
-                            <li><strong>Autostart:</strong> This feature requires <strong>Podman</strong> and a <strong>systemd</strong>-based host OS. When enabled, DistroBear creates a systemd user service that automatically starts the container when you log into your desktop.</li>
-                            <li><strong>Save as Image:</strong> Takes a snapshot of the container's current state and saves it as a new, permanent local image. This is incredibly useful for backing up a configured environment or creating a custom "template" to spawn new containers from. It uses the <code>podman commit</code> command in the background.</li>
-                            <li><strong>Delete:</strong> This permanently removes the container and all data inside it. If you are using an isolated home, that directory will also be deleted. This action cannot be undone, so use it with caution.</li>
+                            <li><strong>Start/Stop:</strong> Toggles the power state of the container. A container must be running to enter it or use its applications. DistroBear uses the command <code>distrobox enter [name] -- /bin/true</code> to reliably start containers and <code>distrobox stop --yes [name]</code> to stop them.</li>
+                            <li><strong>Enter:</strong> Opens a new terminal window with a shell inside the container. This action will automatically start the container if it's stopped. DistroBear attempts to detect your system's default terminal.</li>
+                            <li><strong>Info:</strong> Opens a modal with technical details like the container ID, mounted volumes, and configuration flags. This information is gathered using <code>podman inspect [name]</code>.</li>
+                            <li><strong>Autostart:</strong> Requires <strong>Podman</strong> and a <strong>systemd</strong>-based host. It creates a systemd user service that automatically starts the container on login. This uses <code>podman generate systemd</code> and <code>systemctl --user enable</code>.</li>
+                            <li><strong>Save as Image:</strong> Takes a snapshot of the container's current state and saves it as a new local image. This is useful for backing up a configured environment. It uses the <code>podman commit [name] [new-image-name]</code> command.</li>
+                            <li><strong>Delete:</strong> Permanently removes the container and all its data. This cannot be undone. It uses <code>distrobox rm --yes [name]</code>.</li>
                         </ul>
                     </>
                 ),
@@ -80,18 +108,18 @@ const helpData: HelpCategory[] = [
         topics: [
             {
                 title: "Step 1: Select a Base Image",
-                content: <p>To create a container, you must first have a base image. This page lists all the container images you have downloaded to your local machine. If this list is empty, go to the "Download Images" page to pull one first. You can find thousands of images on public registries like <a href="https://hub.docker.com" target="_blank">Docker Hub</a> or <a href="https://quay.io" target="_blank">Quay.io</a>.</p>,
+                content: <p>To create a container, you must first have a base image. This page lists all the container images you have downloaded to your machine. If this list is empty, go to the "Download Images" page to pull one first. The command used for creation is <code>distrobox-create</code>.</p>,
             },
             {
-                title: "Step 2: Core & Advanced Configuration",
+                title: "Step 2: Configuration Options",
                 content: (
                     <>
-                        <p>After selecting an image, you need to give your container a unique name. You can then configure several powerful options:</p>
+                        <p>After selecting an image, you must give your container a unique name and can then configure several powerful options:</p>
                         <ul className="list-disc list-inside mt-2 space-y-2">
-                            <li><strong>Isolated Home:</strong> <span className="text-accent font-semibold">Highly Recommended.</span> This creates a separate, dedicated home directory for the container inside <code>~/.local/share/distrobox/homes/</code>. It prevents the container from accessing your personal files on the host, providing a significant security and organization boost. If you don't use this, the container will have full access to your host's <code>$HOME</code> directory.</li>
-                            <li><strong>Enable Init:</strong> Injects an init system (like <code>systemd</code>) as PID 1 inside the container. This is necessary for running background services or applications that expect a full system environment (e.g., Docker, some system daemons). Note that this consumes slightly more resources.</li>
-                            <li><strong>NVIDIA GPU Access:</strong> If you have a host with NVIDIA drivers, this option will pass the GPU through to the container. This is essential for GPU-accelerated tasks like gaming, video editing, or AI/ML development.</li>
-                            <li><strong>Volumes:</strong> Mount additional, specific directories from your host into the container. For example, you could mount your host's <code>~/Projects</code> directory to <code>/home/user/Projects</code> inside the container. You can use <code>~</code> as a shortcut for your host home directory. This is great for editing code on your host while compiling it inside the container.</li>
+                            <li><strong>Isolated Home:</strong> <span className="text-accent font-semibold">Highly Recommended.</span> Creates a separate home directory for the container inside <code>~/.local/share/distrobox/homes/</code>. This prevents the container from accessing your host's personal files, a major security benefit. Corresponds to the <code>--home</code> flag.</li>
+                            <li><strong>Enable Init:</strong> Injects an init system (like <code>systemd</code>). This is necessary for running services like Docker inside the container. Corresponds to the <code>--init</code> flag.</li>
+                            <li><strong>NVIDIA GPU Access:</strong> If you have NVIDIA drivers, this passes the GPU through to the container. Essential for GPU-accelerated tasks. Corresponds to the <code>--nvidia</code> flag.</li>
+                            <li><strong>Volumes:</strong> Mount additional directories from your host into the container. For example, mount host <code>~/Projects</code> to container <code>/home/user/Projects</code>. Corresponds to the <code>--volume host:container</code> flag.</li>
                         </ul>
                     </>
                 ),
@@ -99,38 +127,73 @@ const helpData: HelpCategory[] = [
         ],
     },
     {
-        name: "Applications",
+        name: "Managing Applications",
         icon: <Squares2X2Icon />,
         topics: [
             {
-                title: "Finding & Sharing Apps",
+                title: "How Application Discovery Works",
+                content: <p>This page scans your <strong>running</strong> containers for installed graphical applications (specifically, valid <code>.desktop</code> files in standard locations like <code>/usr/share/applications</code>). If a container is stopped, its apps won't appear.</p>,
+            },
+            {
+                title: "Sharing & Unsharing Applications",
                 content: (
                     <>
-                        <p>This page scans your <strong>running</strong> containers for installed graphical applications (specifically, valid <code>.desktop</code> files).</p>
-                        <p>Click the <strong>Share</strong> button to "export" an application. This tells Distrobox to create a special launcher file in your host system's application menu. When you click this launcher (e.g., from your GNOME or KDE menu), the app will launch from within its container seamlessly, feeling just like a native application.</p>
-                        <p>If a container is stopped, its applications won't appear in the list. You will see a tip at the top of the page reminding you of this. You can use the "Filter by Container" dropdown to select a stopped container; the app will then prompt you to start it before it can be scanned.</p>
+                        <p>Clicking <strong>Share</strong> uses the <code>distrobox-export --app [app-name]</code> command. This creates a special launcher file in your host system's application menu (usually at <code>~/.local/share/applications/</code>). When you click this launcher, the app starts seamlessly from its container.</p>
+                        <p><strong>Unshare</strong> reverses this process using the <code>--delete</code> flag.</p>
                     </>
                 ),
             },
         ],
     },
     {
-        name: "Image Management",
+        name: "Managing Images",
         icon: <ArchiveBoxIcon />,
         topics: [
             {
-                title: "Local Images vs. Containers",
-                content: <p>It's helpful to understand the difference: An <strong>Image</strong> is a read-only template or blueprint (like an ISO for a virtual machine). A <strong>Container</strong> is a running instance created from an image. You can have many containers based on a single image. The "Local Images" page manages the templates, while "My Containers" manages the running instances.</p>,
+                title: "Download Images",
+                content: <p>You can browse a curated list of popular images or enter a custom address from a public registry (like <code>docker.io/library/ubuntu</code> or <code>quay.io/fedora/fedora-toolbox:40</code>). This uses the <code>podman pull [address]</code> command.</p>,
             },
             {
-                title: "Download Images",
-                content: <p>Browse a curated list of popular and recommended images for Distrobox. Select one from the list or enter a custom image address (e.g., from Docker Hub, Quay.io, or ghcr.io) into the top bar to download it to your local machine.</p>,
+                title: "Local Images",
+                content: <p>This page lists all images on your machine using <code>podman images</code>. From here you can delete an image (<code>podman rmi [image]</code>) or export it.</p>
             },
             {
                 title: "Import/Export Images",
-                content: <p>You can export any local image to a single <code>.tar</code> archive file. This is a great way to back up your custom images or share them with colleagues. You can then import these <code>.tar</code> files on any other machine that has Podman or Docker, and it will be added to their list of local images.</p>,
+                content: <p>You can export any local image to a single <code>.tar</code> archive file using <code>podman save</code>. This is great for backups or sharing. You can then import these <code>.tar</code> files on another machine using <code>podman load</code>.</p>,
             },
         ],
+    },
+    {
+        name: "Key Commands Reference",
+        icon: <CommandLineIcon />,
+        topics: [
+            {
+                title: "Common Distrobox Commands",
+                content: (
+                    <pre className="text-xs">
+                        <code># List all your distrobox containers{"\n"}distrobox-list{"\n\n"}
+# Create a new Fedora container{"\n"}distrobox-create --name my-fedora --image quay.io/fedora/fedora-toolbox:40{"\n\n"}
+# Enter a running container{"\n"}distrobox-enter my-fedora{"\n\n"}
+# Run a command inside a container without entering{"\n"}distrobox-enter my-fedora -- sudo dnf update{"\n\n"}
+# Stop a running container{"\n"}distrobox-stop my-fedora{"\n\n"}
+# Remove a container permanently{"\n"}distrobox-rm my-fedora</code>
+                    </pre>
+                ),
+            },
+            {
+                title: "Common Podman Commands",
+                content: (
+                     <pre className="text-xs">
+                        <code># List all containers (including non-distrobox){"\n"}podman ps -a{"\n\n"}
+# List all local images{"\n"}podman images{"\n\n"}
+# Pull a new image from a registry{"\n"}podman pull docker.io/library/alpine{"\n\n"}
+# Remove a local image{"\n"}podman rmi docker.io/library/alpine{"\n\n"}
+# View the logs of a container{"\n"}podman logs my-fedora{"\n\n"}
+# See resource usage for running containers{"\n"}podman stats</code>
+                    </pre>
+                ),
+            },
+        ]
     },
     {
         name: "Troubleshooting",
@@ -138,25 +201,21 @@ const helpData: HelpCategory[] = [
         topics: [
             {
                 title: "Commands Are Failing or Errors Appear",
-                content: <p>If you see errors about "command not found" or other unexpected failures, the first place to check is the <strong>Logs</strong> page. It provides a detailed, real-time view of the shell commands DistroBear runs in the background, including their output. Errors are highlighted in red. This is the best place to look for clues when something goes wrong. You can copy the logs to share them when asking for help.</p>,
+                content: <p>The first place to check is the <strong>Logs</strong> page in DistroBear. It provides a detailed, real-time view of the shell commands the app runs and their output. Errors are highlighted in red. This is the best place to look for clues when something goes wrong.</p>,
             },
             {
-                title: "Applications Not Showing Up in the List",
+                title: "Applications Not Showing Up",
                 content: (
                     <>
                     <p>There are a few reasons this could happen:</p>
                     <ul className="list-disc list-inside mt-2 space-y-1">
                         <li>The container holding the application must be <strong>running</strong>.</li>
-                        <li>The application needs a proper <code>.desktop</code> file in a standard system location (like <code>/usr/share/applications</code>). Command-line-only tools will not appear here.</li>
+                        <li>The application needs a proper <code>.desktop</code> file. Command-line-only tools will not appear.</li>
                         <li>The application might be marked as hidden (<code>NoDisplay=true</code> in its .desktop file).</li>
                         <li>Try clicking the "Refresh" button on the Applications page to force a re-scan.</li>
                     </ul>
                     </>
                 ),
-            },
-             {
-                title: "Shared App Doesn't Launch",
-                content: <p>If a shared app icon appears in your menu but doesn't launch, try running it from a terminal inside the container first. Use the <strong>Enter</strong> action, and in the new terminal, type the command to launch your app (e.g., <code>firefox</code>). This will often show you error messages, such as missing dependencies, that are hidden when launched graphically.</p>,
             },
             {
                 title: "Where is my data stored?",
@@ -175,6 +234,7 @@ const helpData: HelpCategory[] = [
     }
 ];
 
+
 const Help: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeCategory, setActiveCategory] = useState(helpData[0].name);
@@ -187,7 +247,10 @@ const Help: React.FC = () => {
             .map(category => ({
                 ...category,
                 topics: category.topics.filter(
-                    topic => topic.title.toLowerCase().includes(lowerQuery)
+                    topic => topic.title.toLowerCase().includes(lowerQuery) || (
+                        // A simple way to search content without complex parsing
+                        JSON.stringify(topic.content).toLowerCase().includes(lowerQuery)
+                    )
                 ),
             }))
             .filter(category => category.name.toLowerCase().includes(lowerQuery) || category.topics.length > 0);
@@ -203,7 +266,6 @@ const Help: React.FC = () => {
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <MagnifyingGlassIcon className="w-5 h-5 text-gray-400" />
                     </div>
-                    {/* FIX: The value prop was incorrectly assigned a function. Moved to onChange and set value to state. */}
                     <input type="search" placeholder="Search topics..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 bg-primary border border-primary-light rounded-full text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent/50"/>
                 </div>
@@ -243,6 +305,9 @@ const Help: React.FC = () => {
                                         </div>
                                     </article>
                                 ))}
+                                {cat.topics.length === 0 && searchQuery && (
+                                     <p className="text-gray-500">No topics in this category match your search.</p>
+                                )}
                             </motion.section>
                         )
                     ))}
