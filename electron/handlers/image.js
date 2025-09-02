@@ -31,6 +31,8 @@ function registerImageHandlers(mainWindow) {
         const sanitizedIdentifier = String(imageIdentifier).replace(/[`$();|&<>]/g, '');
         if (!sanitizedIdentifier) throw new Error('Invalid image identifier provided.');
         
+        logWarn(`DESTRUCTIVE ACTION: User initiated deletion of image "${sanitizedIdentifier}".`);
+        
         try {
             const runtime = await getContainerRuntime();
             let targetImageId;

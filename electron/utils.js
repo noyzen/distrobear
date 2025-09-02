@@ -2,9 +2,11 @@ const { exec, spawn } = require('child_process');
 const { ipcMain } = require('electron');
 const os = require('os');
 const path = require('path');
+const Store = require('electron-store');
 
 // --- LOGGER ---
-let logStore = [];
+const logFileStore = new Store({ name: 'app-logs' });
+let logStore = logFileStore.get('logs', []);
 const MAX_LOGS = 2000;
 let logWindow = null;
 
@@ -24,6 +26,8 @@ function addLog(level, message, details) {
     if (logStore.length > MAX_LOGS) {
         logStore.shift();
     }
+    // Persist logs to file
+    logFileStore.set('logs', logStore);
     logWindow.webContents.send('on-log-entry', entry);
 }
 
@@ -35,7 +39,9 @@ function registerLogHandlers() {
     ipcMain.handle('get-initial-logs', () => logStore);
     ipcMain.handle('clear-logs', () => {
         logStore = [];
-        logInfo('Logs cleared by user.');
+        // Clear persisted logs
+        logFileStore.set('logs', []);
+        logWarn('DESTRUCTIVE ACTION: User cleared all application logs.');
         return logStore;
     });
 }
@@ -189,7 +195,9 @@ async function detectTerminalEmulator() {
     } catch (e) { /* ignore */ }
 
     for (const terminal of checkOrder) {
-        if (await commandExists(terminal)) return terminal;
+        if (await commandExists(terminal)) {
+            return terminal;
+        }
     }
 
     const desktop = process.env.XDG_CURRENT_DESKTOP;

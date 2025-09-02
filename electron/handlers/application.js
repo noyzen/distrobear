@@ -144,6 +144,8 @@ function registerApplicationHandlers(mainWindow) {
         const sanitizedApp = String(appName).replace(/[^a-zA-Z0-9-_\.\s]/g, '');
         if (!sanitizedContainer || !sanitizedApp) throw new Error('Invalid arguments');
 
+        logWarn(`DESTRUCTIVE ACTION: User initiated unexport of application "${sanitizedApp}" from container "${sanitizedContainer}". This will delete the host .desktop file.`);
+
         const appIdentifier = sanitizedApp.replace(/\.desktop$/, '');
         const args = ['enter', sanitizedContainer, '--', 'distrobox-export', '--app', appIdentifier, '--delete'];
         await runCommand('distrobox', args);

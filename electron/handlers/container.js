@@ -113,6 +113,8 @@ function registerContainerHandlers(mainWindow) {
         const sanitizedName = String(name).replace(/[^a-zA-Z0-9-_\.]/g, '');
         if (!sanitizedName) throw new Error('Invalid container name provided.');
         
+        logWarn(`DESTRUCTIVE ACTION: User initiated disabling autostart for container "${sanitizedName}". This may delete the systemd service file.`);
+    
         const systemdUserPath = path.join(os.homedir(), '.config', 'systemd', 'user');
         const serviceFileName = `container-${sanitizedName}.service`;
         const serviceFilePath = path.join(systemdUserPath, serviceFileName);
@@ -125,7 +127,7 @@ function registerContainerHandlers(mainWindow) {
         
         try {
             await fs.unlink(serviceFilePath);
-            logInfo(`Deleted systemd service file: ${serviceFilePath}`);
+            logWarn(`Deleted systemd service file: ${serviceFilePath}`);
         } catch (err) {
             if (err.code !== 'ENOENT') { // Ignore "file not found" errors
                 logWarn(`Could not delete systemd service file: ${err.message}`);
@@ -139,6 +141,7 @@ function registerContainerHandlers(mainWindow) {
         const sanitizedName = String(name).replace(/[^a-zA-Z0-9-_\.]/g, '');
         if (!sanitizedName) throw new Error('Invalid container name provided.');
         try {
+            logWarn(`DESTRUCTIVE ACTION: User initiated deletion of container "${sanitizedName}".`);
             return await runCommand('distrobox', ['rm', '--yes', sanitizedName]);
         } catch(err) {
             throw new Error(`Failed to delete container "${sanitizedName}": ${err.message}`);
