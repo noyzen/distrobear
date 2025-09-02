@@ -24,7 +24,8 @@ function createWindow() {
       nodeIntegration: false,
     },
     frame: false,
-    transparent: false,
+    transparent: true,
+    backgroundColor: '#00000000',
   });
 
   setMainWindowForLogger(mainWindow); // Pass window to the logger utility

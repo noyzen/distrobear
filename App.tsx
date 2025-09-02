@@ -21,6 +21,13 @@ const App: React.FC = () => {
 
   const [currentPage, setCurrentPage] = useState<Page>('my-containers');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  useEffect(() => {
+    window.electronAPI.onWindowStateChange((maximized) => {
+      setIsMaximized(maximized);
+    });
+  }, []);
 
   const performDependencyCheck = async () => {
     setAppState('checking');
@@ -113,8 +120,10 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-primary font-sans overflow-hidden shadow-2xl">
-      <TitleBar />
+    <div className={`flex flex-col h-screen bg-primary font-sans overflow-hidden shadow-2xl ${
+      !isMaximized ? 'border border-primary-light rounded-lg' : ''
+    }`}>
+      <TitleBar isMaximized={isMaximized} />
       {renderAppStateContent()}
     </div>
   );

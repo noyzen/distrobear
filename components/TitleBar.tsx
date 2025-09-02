@@ -1,16 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Logo from './Logo';
 import { MinimizeIcon, RestoreIcon, MaximizeIcon, CloseIcon } from './Icons';
 
-const TitleBar: React.FC = () => {
-  const [isMaximized, setIsMaximized] = useState(false);
-  
-  useEffect(() => {
-    window.electronAPI.onWindowStateChange((isMaximized) => {
-      setIsMaximized(isMaximized);
-    });
-  }, []);
+interface TitleBarProps {
+  isMaximized: boolean;
+}
 
+const TitleBar: React.FC<TitleBarProps> = ({ isMaximized }) => {
   const handleMinimize = () => window.electronAPI.minimizeWindow();
   const handleMaximize = () => window.electronAPI.maximizeWindow();
   const handleClose = () => window.electronAPI.closeWindow();
