@@ -111,7 +111,7 @@ const SystemInfo: React.FC<SystemInfoProps> = ({ onRerunSetup }) => {
             whileTap={{ scale: 0.95 }}
             onClick={fetchSystemInfo}
             disabled={isLoading}
-            className="px-8 py-3 bg-accent text-charcoal font-bold rounded-full hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-300 transform focus:outline-none focus:ring-4 focus:ring-accent/50 flex items-center justify-center gap-2"
+            className="px-8 py-3 bg-accent text-white font-bold rounded-full hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-300 transform focus:outline-none focus:ring-4 focus:ring-accent/50 flex items-center justify-center gap-2"
           >
             {isLoading ? 'Loading...' : <><ArrowPathIcon /> Refresh System Info</>}
           </motion.button>
@@ -123,7 +123,7 @@ const SystemInfo: React.FC<SystemInfoProps> = ({ onRerunSetup }) => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={onRerunSetup}
-                className="px-6 py-2 bg-primary-light text-gray-200 font-semibold rounded-lg hover:bg-accent hover:text-charcoal transition-all duration-200"
+                className="px-6 py-2 bg-primary-light text-gray-200 font-semibold rounded-lg hover:bg-accent hover:text-white transition-all duration-200"
             >
                 Run Setup Wizard Manually
             </motion.button>

@@ -81,7 +81,7 @@ const ApplicationRow: React.FC<ApplicationRowProps> = ({ app, onActionComplete }
                 whileTap={{ scale: 0.95 }}
                 onClick={handleShare}
                 disabled={!!processingAction}
-                className="w-32 flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-accent text-charcoal hover:bg-accent-light disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
+                className="w-32 flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 bg-accent text-white hover:bg-accent-light disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed"
                 title={`Share ${app.name} with the host.`}
             >
             {processingAction === 'share' ? <SpinnerIcon /> : <><ArrowUpOnSquareIcon /> Share</>}

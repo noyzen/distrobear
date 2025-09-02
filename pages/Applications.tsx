@@ -182,7 +182,7 @@ const Applications: React.FC = () => {
                     whileTap={{ scale: 0.95 }}
                     onClick={() => fetchAllData(true)}
                     disabled={isLoading || isRefreshing}
-                    className="w-full sm:w-auto px-5 py-2 bg-accent text-charcoal font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
+                    className="w-full sm:w-auto px-5 py-2 bg-accent text-white font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
                 >
                     {isRefreshing ? <SpinnerIcon /> : <ArrowPathIcon />}
                     {isRefreshing ? 'Refreshing...' : 'Refresh'}

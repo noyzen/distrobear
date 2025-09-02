@@ -106,7 +106,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ setupInfo, onSetupComplete, o
           {isFinished ? (
             <button
               onClick={onSetupComplete}
-              className="px-8 py-3 bg-accent text-charcoal font-bold rounded-full hover:bg-accent-light transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-accent/50"
+              className="px-8 py-3 bg-accent text-white font-bold rounded-full hover:bg-accent-light transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-accent/50"
             >
               Continue to Application
             </button>
@@ -115,7 +115,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ setupInfo, onSetupComplete, o
               <button
                 onClick={handleInstall}
                 disabled={isInstalling}
-                className="px-8 py-3 bg-accent text-charcoal font-bold rounded-full hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-accent/50"
+                className="px-8 py-3 bg-accent text-white font-bold rounded-full hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-accent/50"
               >
                 {isInstalling ? 'Installing...' : 'Begin Installation'}
               </button>

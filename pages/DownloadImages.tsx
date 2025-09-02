@@ -159,7 +159,7 @@ const DownloadImages: React.FC = () => {
               whileTap={{ scale: 0.95 }}
               onClick={handlePullImage}
               disabled={!customImageAddress || isPulling}
-              className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-2 bg-accent text-charcoal font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200"
+              className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-2 bg-accent text-white font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200"
             >
               <ArrowDownTrayIcon className="w-5 h-5" />
               Download

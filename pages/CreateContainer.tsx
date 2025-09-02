@@ -139,7 +139,7 @@ const CreateContainer: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ s
         {/* Step 1: Image Selection */}
         <section className="bg-primary p-6 rounded-lg shadow-lg">
             <h2 className="text-xl font-bold text-gray-200 mb-4 flex items-center gap-3">
-                <span className="bg-accent text-charcoal rounded-full h-8 w-8 flex items-center justify-center font-bold flex-shrink-0">1</span>
+                <span className="bg-accent text-white rounded-full h-8 w-8 flex items-center justify-center font-bold flex-shrink-0">1</span>
                 Select a Base Image
             </h2>
             <div className="relative mb-4">
@@ -192,7 +192,7 @@ const CreateContainer: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ s
         {/* Step 2: Configuration */}
         <section className={`bg-primary p-6 rounded-lg shadow-lg transition-opacity duration-500 ${!selectedImage ? 'opacity-50' : 'opacity-100'}`}>
             <h2 className="text-xl font-bold text-gray-200 mb-6 flex items-center gap-3">
-                <span className="bg-accent text-charcoal rounded-full h-8 w-8 flex items-center justify-center font-bold flex-shrink-0">2</span>
+                <span className="bg-accent text-white rounded-full h-8 w-8 flex items-center justify-center font-bold flex-shrink-0">2</span>
                 Configuration
             </h2>
             <fieldset disabled={!selectedImage} className="space-y-6">
@@ -288,7 +288,7 @@ const CreateContainer: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ s
                 whileTap={{ scale: 0.95 }}
                 onClick={handleCreate}
                 disabled={!isFormValid || isCreating}
-                className="px-10 py-3 text-lg bg-accent text-charcoal font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200 transform focus:outline-none focus:ring-4 focus:ring-accent/50"
+                className="px-10 py-3 text-lg bg-accent text-white font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-200 transform focus:outline-none focus:ring-4 focus:ring-accent/50"
             >
                 Create Container
             </motion.button>

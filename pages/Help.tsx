@@ -19,11 +19,19 @@ const helpData: HelpCategory[] = [
         icon: <CubeIcon />,
         topics: [
             {
+                title: "What is a Container?",
+                content: (
+                    <>
+                        <p>Think of a container as a lightweight, isolated box where you can run a completely separate Linux operating system. It shares your main system's core (the kernel) but has its own files, applications, and libraries.</p>
+                        <p>This is incredibly powerful because it lets you, for example, run an Arch Linux environment on your Fedora machine to test a specific software, without altering your main system. Distrobox makes these "boxes" easy to create and integrate with your desktop.</p>
+                    </>
+                ),
+            },
+            {
                 title: "What is DistroBear?",
                 content: (
                     <>
-                        <p>Welcome to DistroBear! This application is a graphical user interface (GUI) for <strong>Distrobox</strong>, a powerful command-line tool that lets you create and manage containerized development and testing environments.</p>
-                        <p>Essentially, you can run almost any Linux distribution inside a container on your host system, and its applications will be tightly integrated with your desktop. DistroBear makes this entire process visual and easy to manage.</p>
+                        <p>DistroBear is a graphical user interface (GUI) for <strong>Distrobox</strong>. It takes the powerful command-line features of Distrobox and presents them in an intuitive, visual way. Our goal is to make container management accessible to everyone, from beginners to power users.</p>
                     </>
                 ),
             },
@@ -46,7 +54,7 @@ const helpData: HelpCategory[] = [
         topics: [
             {
                 title: "The Main Dashboard",
-                content: <p>This page is your central hub. It lists all Distrobox containers on your system, showing their name, the base image they were created from, and their current status (e.g., "Up", "Exited"). Use the refresh button in the top right to poll for the latest status of all containers.</p>,
+                content: <p>This page is your central hub. It lists all Distrobox containers on your system, showing their name, the base image they were created from, and their current status. The status indicator on the left gives you a quick visual cue: a pulsing green circle for 'Running', and a hollow grey circle for 'Stopped' or 'Exited'.</p>,
             },
             {
                 title: "Container Actions Explained",
@@ -55,7 +63,7 @@ const helpData: HelpCategory[] = [
                         <p>Click on any container in the list to expand its action panel. Here's what each action does:</p>
                         <ul className="list-disc list-inside mt-2 space-y-2">
                             <li><strong>Start/Stop:</strong> Toggles the power state of the container. A container must be running to enter it or use its applications.</li>
-                            <li><strong>Enter:</strong> This is one of the most common actions. It opens a new terminal window with a shell inside the container. DistroBear will attempt to detect and use your system's default terminal emulator.</li>
+                            <li><strong>Enter:</strong> This is one of the most common actions. It opens a new terminal window with a shell inside the container. This action will automatically start the container if it's stopped. DistroBear will attempt to detect and use your system's default terminal emulator.</li>
                             <li><strong>Info:</strong> Opens a detailed modal with technical information like the container's unique ID, process ID (PID), all mounted volumes, and configuration flags like NVIDIA or Init support.</li>
                             <li><strong>Autostart:</strong> This feature requires <strong>Podman</strong> and a <strong>systemd</strong>-based host OS. When enabled, DistroBear creates a systemd user service that automatically starts the container when you log into your desktop.</li>
                             <li><strong>Save as Image:</strong> Takes a snapshot of the container's current state and saves it as a new, permanent local image. This is incredibly useful for backing up a configured environment or creating a custom "template" to spawn new containers from. It uses the <code>podman commit</code> command in the background.</li>
@@ -72,7 +80,7 @@ const helpData: HelpCategory[] = [
         topics: [
             {
                 title: "Step 1: Select a Base Image",
-                content: <p>To create a container, you must first have a base image. This page lists all the container images you have downloaded to your local machine. If this list is empty, go to the "Download Images" page to pull one first.</p>,
+                content: <p>To create a container, you must first have a base image. This page lists all the container images you have downloaded to your local machine. If this list is empty, go to the "Download Images" page to pull one first. You can find thousands of images on public registries like <a href="https://hub.docker.com" target="_blank">Docker Hub</a> or <a href="https://quay.io" target="_blank">Quay.io</a>.</p>,
             },
             {
                 title: "Step 2: Core & Advanced Configuration",
@@ -83,7 +91,7 @@ const helpData: HelpCategory[] = [
                             <li><strong>Isolated Home:</strong> <span className="text-accent font-semibold">Highly Recommended.</span> This creates a separate, dedicated home directory for the container inside <code>~/.local/share/distrobox/homes/</code>. It prevents the container from accessing your personal files on the host, providing a significant security and organization boost. If you don't use this, the container will have full access to your host's <code>$HOME</code> directory.</li>
                             <li><strong>Enable Init:</strong> Injects an init system (like <code>systemd</code>) as PID 1 inside the container. This is necessary for running background services or applications that expect a full system environment (e.g., Docker, some system daemons). Note that this consumes slightly more resources.</li>
                             <li><strong>NVIDIA GPU Access:</strong> If you have a host with NVIDIA drivers, this option will pass the GPU through to the container. This is essential for GPU-accelerated tasks like gaming, video editing, or AI/ML development.</li>
-                            <li><strong>Volumes:</strong> Mount additional, specific directories from your host into the container. For example, you could mount your host's <code>~/Projects</code> directory to <code>/home/user/Projects</code> inside the container. This allows you to edit code with an IDE on your host while compiling and running it inside the container's sandboxed environment.</li>
+                            <li><strong>Volumes:</strong> Mount additional, specific directories from your host into the container. For example, you could mount your host's <code>~/Projects</code> directory to <code>/home/user/Projects</code> inside the container. You can use <code>~</code> as a shortcut for your host home directory. This is great for editing code on your host while compiling it inside the container.</li>
                         </ul>
                     </>
                 ),
@@ -100,7 +108,7 @@ const helpData: HelpCategory[] = [
                     <>
                         <p>This page scans your <strong>running</strong> containers for installed graphical applications (specifically, valid <code>.desktop</code> files).</p>
                         <p>Click the <strong>Share</strong> button to "export" an application. This tells Distrobox to create a special launcher file in your host system's application menu. When you click this launcher (e.g., from your GNOME or KDE menu), the app will launch from within its container seamlessly, feeling just like a native application.</p>
-                        <p>If a container is stopped, its applications won't appear in the list. You can use the "Filter by Container" dropdown to select a stopped container; the app will then prompt you to start it before it can be scanned.</p>
+                        <p>If a container is stopped, its applications won't appear in the list. You will see a tip at the top of the page reminding you of this. You can use the "Filter by Container" dropdown to select a stopped container; the app will then prompt you to start it before it can be scanned.</p>
                     </>
                 ),
             },
@@ -134,14 +142,17 @@ const helpData: HelpCategory[] = [
             },
             {
                 title: "Applications Not Showing Up in the List",
-                content: <p>There are a few reasons this could happen:
+                content: (
+                    <>
+                    <p>There are a few reasons this could happen:</p>
                     <ul className="list-disc list-inside mt-2 space-y-1">
                         <li>The container holding the application must be <strong>running</strong>.</li>
                         <li>The application needs a proper <code>.desktop</code> file in a standard system location (like <code>/usr/share/applications</code>). Command-line-only tools will not appear here.</li>
                         <li>The application might be marked as hidden (<code>NoDisplay=true</code> in its .desktop file).</li>
                         <li>Try clicking the "Refresh" button on the Applications page to force a re-scan.</li>
                     </ul>
-                </p>,
+                    </>
+                ),
             },
              {
                 title: "Shared App Doesn't Launch",
@@ -227,7 +238,7 @@ const Help: React.FC = () => {
                                 {cat.topics.map(topic => (
                                     <article key={topic.title}>
                                         <h3 className="text-lg font-semibold text-accent mb-2">{topic.title}</h3>
-                                        <div className="text-gray-300 space-y-3 prose prose-invert prose-p:text-gray-300 prose-strong:text-gray-200 prose-code:text-accent/80 prose-code:bg-primary-light prose-code:p-1 prose-code:rounded-md prose-code:font-mono">
+                                        <div className="text-gray-300 space-y-3 prose prose-invert prose-p:text-gray-300 prose-strong:text-gray-200 prose-code:text-accent/80 prose-code:bg-primary-light prose-code:p-1 prose-code:rounded-md prose-code:font-mono prose-a:text-accent/90 hover:prose-a:text-accent">
                                             {topic.content}
                                         </div>
                                     </article>

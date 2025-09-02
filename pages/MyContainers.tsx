@@ -129,7 +129,7 @@ const MyContainers: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setC
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setCurrentPage('create-new')}
-                    className="flex-1 sm:flex-none px-5 py-2 bg-primary-light text-gray-200 font-semibold rounded-lg hover:bg-accent hover:text-charcoal transition-all duration-200"
+                    className="flex-1 sm:flex-none px-5 py-2 bg-primary-light text-gray-200 font-semibold rounded-lg hover:bg-accent hover:text-white transition-all duration-200"
                 >
                     Create
                 </motion.button>
@@ -138,7 +138,7 @@ const MyContainers: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ setC
                     whileTap={{ scale: 0.95 }}
                     onClick={() => fetchContainers(true)}
                     disabled={isLoading}
-                    className="flex-1 sm:flex-none px-5 py-2 bg-accent text-charcoal font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
+                    className="flex-1 sm:flex-none px-5 py-2 bg-accent text-white font-bold rounded-lg hover:bg-accent-light disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
                 >
                     {isLoading ? <SpinnerIcon /> : <ArrowPathIcon />}
                     {isLoading ? '...' : 'Refresh'}

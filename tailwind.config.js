@@ -10,9 +10,9 @@ module.exports = {
     extend: {
       colors: {
         'accent': {
-          'DEFAULT': '#34d399', // Light Green
-          'light': '#6ee7b7',
-          'dark': '#059669',
+          'DEFAULT': '#16a34a', // green-600
+          'light': '#22c55e',   // green-500
+          'dark': '#15803d',    // green-700
         },
         'background': '#0a0a0a', // Near-black for body
         'primary': {
@@ -20,6 +20,7 @@ module.exports = {
           'light': '#2e2e2e',   // Lighter grey for hovers, inputs
           'dark': '#141414'     // Darker grey for title bar
         },
+        'charcoal': '#101010',
       }
     },
   },
