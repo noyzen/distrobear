@@ -43,12 +43,18 @@
       "buildResources": "build",
       "output": "release"
     },
+    "win": {
+      "icon": "distrobear.png"
+    },
+    "mac": {
+      "icon": "distrobear.png"
+    },
     "linux": {
       "target": [
         "AppImage"
       ],
       "category": "Utility",
-      "icon": "build/icon.svg"
+      "icon": "distrobear.png"
     }
   }
 }
