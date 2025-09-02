@@ -1,6 +1,45 @@
 const { exec, spawn } = require('child_process');
+const { ipcMain } = require('electron');
 const os = require('os');
 const path = require('path');
+
+// --- LOGGER ---
+let logStore = [];
+const MAX_LOGS = 200;
+let logWindow = null;
+
+function setMainWindowForLogger(win) {
+    logWindow = win;
+}
+
+function addLog(level, message, details) {
+    if (!logWindow) return;
+    const entry = {
+        timestamp: new Date().toISOString(),
+        level,
+        message,
+        details: details ? String(details) : undefined,
+    };
+    logStore.push(entry);
+    if (logStore.length > MAX_LOGS) {
+        logStore.shift();
+    }
+    logWindow.webContents.send('on-log-entry', entry);
+}
+
+const logInfo = (message, details) => addLog('INFO', message, details);
+const logWarn = (message, details) => addLog('WARN', message, details);
+const logError = (message, details) => addLog('ERROR', message, details);
+
+function registerLogHandlers() {
+    ipcMain.handle('get-initial-logs', () => logStore);
+    ipcMain.handle('clear-logs', () => {
+        logStore = [];
+        logInfo('Logs cleared by user.');
+        return logStore;
+    });
+}
+// --- END LOGGER ---
 
 // Helper function to check if a command exists
 const commandExists = (command) => {
@@ -81,6 +120,7 @@ function runCommand(command, args = [], options = {}) {
   const { supressErrorLoggingForExitCodes = [] } = options;
   return new Promise((resolve, reject) => {
     const commandString = [command, ...args.map(a => `'${a}'`)].join(' ');
+    logInfo(`Executing command:`, `${command} ${args.join(' ')}`);
 
     const child = spawn('/usr/bin/env', ['-u', 'npm_config_prefix', '/bin/bash', '-l', '-c', commandString]);
 
@@ -91,17 +131,21 @@ function runCommand(command, args = [], options = {}) {
     child.stderr.on('data', (data) => { stderr += data.toString(); });
 
     child.on('close', (code) => {
+      const commandToRunForLogging = `${command} ${args.map(a => `'${a}'`).join(' ')}`;
       if (code !== 0) {
+        const fullStderr = stderr.trim() || `Process exited with code ${code}`;
         if (!supressErrorLoggingForExitCodes.includes(code)) {
-            console.error(`[ERROR] Command "${commandString}" failed with code ${code}. Stderr:\n${stderr}`);
+            logError(`Command failed with code ${code}: "${commandToRunForLogging}"`, `Stderr:\n${fullStderr}`);
         }
-        reject(new Error(stderr.trim() || `Process exited with code ${code}`));
+        reject(new Error(fullStderr));
       } else {
+        logInfo(`Command finished successfully: "${commandToRunForLogging}"`, `Stdout:\n${stdout.trim()}`);
         resolve(stdout.trim());
       }
     });
 
     child.on('error', (err) => {
+      logError(`Failed to start subprocess for "${commandString}"`, err.message);
       reject(err);
     });
   });
@@ -163,5 +207,11 @@ module.exports = {
     runCommandStreamed,
     runCommand,
     getContainerRuntime,
-    detectTerminalEmulator
+    detectTerminalEmulator,
+    // Logger exports
+    setMainWindowForLogger,
+    logInfo,
+    logWarn,
+    logError,
+    registerLogHandlers,
 };

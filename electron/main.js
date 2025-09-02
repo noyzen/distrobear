@@ -6,6 +6,7 @@ const { registerSystemHandlers } = require('./handlers/system');
 const { registerContainerHandlers } = require('./handlers/container');
 const { registerImageHandlers } = require('./handlers/image');
 const { registerApplicationHandlers } = require('./handlers/application');
+const { registerLogHandlers, setMainWindowForLogger } = require('./utils');
 
 const store = new Store();
 let mainWindow;
@@ -27,6 +28,8 @@ function createWindow() {
     backgroundColor: '#00000000',
   });
 
+  setMainWindowForLogger(mainWindow); // Pass window to the logger utility
+
   mainWindow.on('close', () => {
     store.set('windowBounds', mainWindow.getBounds());
   });
@@ -45,6 +48,7 @@ function createWindow() {
 
 // Register all IPC handlers
 function registerIpcHandlers() {
+    registerLogHandlers(); // Must be first
     registerSystemHandlers(mainWindow);
     registerContainerHandlers(mainWindow);
     registerImageHandlers(mainWindow);

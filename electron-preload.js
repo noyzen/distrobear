@@ -38,4 +38,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   imagePullCancel: () => ipcRenderer.invoke('image-pull-cancel'),
   containerCreate: (options) => ipcRenderer.invoke('container-create', options),
   onCreationLog: (callback) => ipcRenderer.on('creation-log', (_event, log) => callback(log)),
+  // Logging
+  onLogEntry: (callback) => ipcRenderer.on('on-log-entry', (_event, log) => callback(log)),
+  getInitialLogs: () => ipcRenderer.invoke('get-initial-logs'),
+  clearLogs: () => ipcRenderer.invoke('clear-logs'),
 });

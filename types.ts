@@ -85,6 +85,13 @@ export interface CreateContainerOptions {
   volumes: { hostPath: string; containerPath: string }[];
 }
 
+export interface LogEntry {
+  timestamp: string;
+  level: 'INFO' | 'WARN' | 'ERROR';
+  message: string;
+  details?: string;
+}
+
 export interface IElectronAPI {
   getOSInfo: () => Promise<OSInfo>;
   getVersionInfo: () => Promise<VersionInfo>;
@@ -117,6 +124,10 @@ export interface IElectronAPI {
   imagePullCancel: () => Promise<{ success: boolean; message?: string }>;
   containerCreate: (options: CreateContainerOptions) => Promise<void>;
   onCreationLog: (callback: (log: string) => void) => void;
+  // Logging
+  onLogEntry: (callback: (log: LogEntry) => void) => void;
+  getInitialLogs: () => Promise<LogEntry[]>;
+  clearLogs: () => Promise<void>;
 }
 
 declare global {
