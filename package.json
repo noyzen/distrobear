@@ -44,17 +44,17 @@
       "output": "release"
     },
     "win": {
-      "icon": "distrobear.png"
+      "icon": "build/distrobear.png"
     },
     "mac": {
-      "icon": "distrobear.png"
+      "icon": "build/distrobear.png"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
       "category": "Utility",
-      "icon": "distrobear.png"
+      "icon": "build/distrobear.png"
     }
   }
 }

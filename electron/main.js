@@ -18,7 +18,6 @@ function createWindow() {
     ...windowBounds,
     minWidth: 800,
     minHeight: 600,
-    icon: path.join(__dirname, '..', 'build', 'distrobear.png'),
     webPreferences: {
       preload: path.join(__dirname, '../electron-preload.js'), // Adjusted path
       contextIsolation: true,
