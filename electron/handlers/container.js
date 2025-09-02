@@ -3,11 +3,12 @@ const os = require('os');
 const path = require('path');
 const fs = require('fs').promises;
 const { spawn } = require('child_process');
-const { runCommand, runCommandStreamed, getContainerRuntime, isSystemdServiceEnabled, detectTerminalEmulator } = require('../utils');
+const { runCommand, runCommandStreamed, getContainerRuntime, isSystemdServiceEnabled, detectTerminalEmulator, logInfo, logWarn } = require('../utils');
 
 function registerContainerHandlers(mainWindow) {
     ipcMain.handle('list-containers', async () => {
         try {
+            logInfo('Listing containers...');
             const command = await getContainerRuntime();
             const psArgs = ['ps', '-a', '--filter', 'label=manager=distrobox', '--format', '{{.Names}}\t{{.Image}}\t{{.Status}}'];
             const output = await runCommand(command, psArgs);
@@ -31,7 +32,7 @@ function registerContainerHandlers(mainWindow) {
                         isIsolated = !hasHostHomeMount;
                     }
                 } catch (inspectErr) {
-                    console.warn(`[WARN] Could not inspect container "${name}" to check for isolation. Error: ${inspectErr.message}`);
+                    logWarn(`Could not inspect container "${name}" to check for isolation. Assuming isolated.`, inspectErr.message);
                 }
 
                 return { name, image, status, isAutostartEnabled, isIsolated };
@@ -74,10 +75,12 @@ function registerContainerHandlers(mainWindow) {
         if (!sanitizedName) throw new Error('Invalid container name provided.');
         
         const systemdUserPath = path.join(os.homedir(), '.config', 'systemd', 'user');
+        logInfo(`Ensuring systemd user path exists: ${systemdUserPath}`);
         await fs.mkdir(systemdUserPath, { recursive: true });
 
         const serviceFileName = `container-${sanitizedName}.service`;
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'distrobear-'));
+        logInfo(`Created temporary directory for systemd generation: ${tempDir}`);
 
         try {
             const spawnOpts = { cwd: tempDir };
@@ -91,14 +94,18 @@ function registerContainerHandlers(mainWindow) {
                 });
                 podmanCmd.on('error', reject);
             });
+            logInfo(`Generated systemd file for "${sanitizedName}" in temporary directory.`);
 
             const tempServicePath = path.join(tempDir, serviceFileName);
             const finalServicePath = path.join(systemdUserPath, serviceFileName);
             await fs.copyFile(tempServicePath, finalServicePath);
+            logInfo(`Copied service file from ${tempServicePath} to ${finalServicePath}`);
+            
             await runCommand('systemctl', ['--user', 'daemon-reload']);
             await runCommand('systemctl', ['--user', 'enable', serviceFileName]);
         } finally {
             await fs.rm(tempDir, { recursive: true, force: true });
+            logInfo(`Cleaned up temporary directory: ${tempDir}`);
         }
     });
 
@@ -113,14 +120,15 @@ function registerContainerHandlers(mainWindow) {
         try {
             await runCommand('systemctl', ['--user', 'disable', serviceFileName]);
         } catch (err) {
-            console.warn(`Could not disable systemd service (might not exist): ${err.message}`);
+            logWarn(`Could not disable systemd service (might not exist): ${err.message}`);
         }
         
         try {
             await fs.unlink(serviceFilePath);
+            logInfo(`Deleted systemd service file: ${serviceFilePath}`);
         } catch (err) {
-            if (err.code !== 'ENOENT') {
-                console.warn(`Could not delete systemd service file: ${err.message}`);
+            if (err.code !== 'ENOENT') { // Ignore "file not found" errors
+                logWarn(`Could not delete systemd service file: ${err.message}`);
             }
         }
         

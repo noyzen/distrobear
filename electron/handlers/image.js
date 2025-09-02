@@ -1,5 +1,5 @@
 const { ipcMain, dialog } = require('electron');
-const { runCommand, runCommandStreamed, getContainerRuntime } = require('../utils');
+const { runCommand, runCommandStreamed, getContainerRuntime, logWarn } = require('../utils');
 
 let activePullProcess = null;
 
@@ -38,7 +38,7 @@ function registerImageHandlers(mainWindow) {
                 const inspectOutput = await runCommand(runtime, ['inspect', sanitizedIdentifier]);
                 targetImageId = JSON.parse(inspectOutput)[0].Id;
             } catch (e) {
-                console.warn(`[WARN] Could not inspect image "${sanitizedIdentifier}", proceeding with deletion. Error: ${e.message}`);
+                logWarn(`Could not inspect image "${sanitizedIdentifier}", proceeding with deletion attempt.`, e.message);
                 await runCommand(runtime, ['rmi', '--force', sanitizedIdentifier]);
                 return;
             }

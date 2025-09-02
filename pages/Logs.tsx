@@ -4,6 +4,8 @@ import type { LogEntry } from '../types';
 import { ArrowPathIcon, ClipboardDocumentIcon, TrashIcon, MagnifyingGlassIcon } from '../components/Icons';
 import SpinnerIcon from '../components/shared/SpinnerIcon';
 
+const MAX_FRONTEND_LOGS = 2000;
+
 const LogLevelPill: React.FC<{ level: LogEntry['level'] }> = ({ level }) => {
     const levelStyles = {
         INFO: 'bg-blue-500/20 text-blue-300',
@@ -30,17 +32,18 @@ const Logs: React.FC = () => {
 
     useEffect(() => {
         fetchLogs();
-        const removeListener = window.electronAPI.onLogEntry((log) => {
-            setLogs(prev => [...prev, log]);
+        window.electronAPI.onLogEntry((log) => {
+            setLogs(prev => [...prev, log].slice(-MAX_FRONTEND_LOGS));
         });
-        // IPC listener setup doesn't return a cleanup function.
+        // IPC listener in Electron doesn't typically return a cleanup function.
     }, []);
 
     useEffect(() => {
         // Auto-scroll on new log entry if scrolled to the bottom
         const el = logContainerRef.current;
         if (el) {
-            const isScrolledToBottom = el.scrollHeight - el.clientHeight <= el.scrollTop + 1;
+            // A little buffer room
+            const isScrolledToBottom = el.scrollHeight - el.clientHeight <= el.scrollTop + 5;
             if (isScrolledToBottom) {
                 el.scrollTop = el.scrollHeight;
             }
