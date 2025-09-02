@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { motion } from 'framer-motion';
 import type { LogEntry } from '../types';
 import { ArrowPathIcon, ClipboardDocumentIcon, TrashIcon, MagnifyingGlassIcon } from '../components/Icons';
 import SpinnerIcon from '../components/shared/SpinnerIcon';

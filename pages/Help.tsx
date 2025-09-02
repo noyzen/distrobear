@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MagnifyingGlassIcon, CubeIcon, PlusCircleIcon, Squares2X2Icon, ArchiveBoxIcon, ArrowDownTrayIcon, ExclamationTriangleIcon } from '../components/Icons';
+import { MagnifyingGlassIcon, CubeIcon, PlusCircleIcon, Squares2X2Icon, ArchiveBoxIcon, ExclamationTriangleIcon } from '../components/Icons';
 
 interface HelpTopic {
     title: string;
