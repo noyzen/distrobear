@@ -37,7 +37,15 @@ function registerApplicationHandlers(mainWindow) {
                     { supressErrorLoggingForExitCodes: [1] } // Code 1 can mean "no apps", not a fatal error
                 ).catch(() => ''); 
                 
-                const exportedAppIdentifiers = new Set(listAppsOutput.split('\n').filter(Boolean));
+                const exportedAppIdentifiers = new Set(
+                    listAppsOutput.split('\n')
+                        .filter(Boolean)
+                        .map(line => {
+                            // Handle format "AppName | path" or just "AppName"
+                            const parts = line.split('|');
+                            return parts[0].trim().toLowerCase(); 
+                        })
+                );
                 logInfo(`[${containerName}] Parsed exported apps:`, JSON.stringify([...exportedAppIdentifiers]));
                 exportedAppsByContainer.set(containerName, exportedAppIdentifiers);
             } catch (e) {
@@ -62,7 +70,9 @@ function registerApplicationHandlers(mainWindow) {
                         const appName = path.basename(desktopFile);
                         const appIdentifier = appName.replace(/\.desktop$/, '');
 
-                        const isExported = exportedAppSet.has(appIdentifier);
+                        // Determine if exported by checking the reliable set we built (case-insensitive).
+                        const isExported = exportedAppSet.has(appIdentifier.toLowerCase());
+                        
                         if (isExported) {
                             logInfo(`[${containerName}] Match found: "${appName}" (${appIdentifier}) is exported.`);
                         }
