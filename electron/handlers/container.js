@@ -85,7 +85,7 @@ function registerContainerHandlers(mainWindow) {
         try {
             const spawnOpts = { cwd: tempDir };
             await new Promise((resolve, reject) => {
-                const podmanCmd = spawn('/bin/bash', ['-l', '-c', `podman generate systemd --new --files --name '${sanitizedName}'`], spawnOpts);
+                const podmanCmd = spawn('/bin/bash', ['-l', '-c', `podman generate systemd --files --name '${sanitizedName}'`], spawnOpts);
                 let stderr = '';
                 podmanCmd.stderr.on('data', (data) => { stderr += data.toString(); });
                 podmanCmd.on('close', (code) => {

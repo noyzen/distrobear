@@ -514,7 +514,7 @@ ipcMain.handle('container-autostart-enable', async (event, name) => {
     await new Promise((resolve, reject) => {
         const podmanCmd = spawn(
           '/bin/bash', 
-          ['-l', '-c', `podman generate systemd --new --files --name '${sanitizedName}'`], 
+          ['-l', '-c', `podman generate systemd --files --name '${sanitizedName}'`], 
           spawnOpts
         );
         let stderr = '';
