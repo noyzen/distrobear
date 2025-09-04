@@ -1,7 +1,7 @@
 const { ipcMain } = require('electron');
 const os = require('os');
 const sudo = require('sudo-prompt');
-const { commandExists, runCommand, runCommandStreamed, detectTerminalEmulator } = require('../utils');
+const { commandExists, runCommand, runCommandStreamed, detectTerminalEmulator, logInfo, logWarn, logError } = require('../utils');
 
 function registerSystemHandlers(mainWindow) {
     ipcMain.handle('check-dependencies', async () => {
@@ -22,6 +22,9 @@ function registerSystemHandlers(mainWindow) {
 
     ipcMain.handle('install-dependencies', async () => {
         const logToFrontend = (data) => mainWindow.webContents.send('installation-log', data.toString());
+
+        logInfo('SETUP: Starting dependency installation process.');
+        logToFrontend('--- Starting dependency installation process... ---\n');
 
         const packageManagers = {
             apt: { cmd: 'apt-get', args: ['install', '-y', 'podman'] },
@@ -44,11 +47,13 @@ function registerSystemHandlers(mainWindow) {
         const isPodmanInstalled = await commandExists('podman');
         if (!isPodmanInstalled) {
             if (!pmDetected) {
-                const msg = 'Error: Podman is not installed, and could not detect a supported package manager (apt, dnf, pacman, zypper) to install it.\n';
-                logToFrontend(msg);
+                const msg = 'Error: Podman is not installed, and could not detect a supported package manager (apt, dnf, pacman, zypper) to install it.';
+                logError('SETUP: ' + msg);
+                logToFrontend(msg + '\n');
                 throw new Error('Unsupported package manager.');
             }
 
+            logInfo(`SETUP: Podman not found. Using sudo to run: ${installCommand}`);
             logToFrontend('--- Podman not found. Sudo privileges are required for installation. ---\n');
             try {
                 await new Promise((resolve, reject) => {
@@ -58,27 +63,33 @@ function registerSystemHandlers(mainWindow) {
                     child.stderr.on('data', logToFrontend);
                     child.on('close', (code) => {
                         if (code === 0) resolve();
-                        else reject(new Error(`Podman installation failed with exit code ${code}.`));
+                        else reject(new Error(`Podman installation failed with exit code ${code}. Check logs for details.`));
                     });
                 });
+                logInfo('SETUP: Podman installation command completed successfully.');
                 logToFrontend('--- Podman installed successfully. ---\n');
             } catch (err) {
+                logError('SETUP: Podman installation failed.', err.message);
                 logToFrontend(`--- Podman installation failed: ${err.message} ---\n`);
                 throw err;
             }
         } else {
+            logInfo('SETUP: Podman is already installed. Skipping.');
             logToFrontend('--- Podman is already installed. Skipping. ---\n');
         }
 
+        logInfo('SETUP: Checking for curl/wget for Distrobox installation...');
         logToFrontend('--- Checking for curl/wget for Distrobox installation... ---\n');
         const curlExists = await commandExists('curl');
         const wgetExists = await commandExists('wget');
 
         if (!curlExists && !wgetExists) {
-            const msg = 'Error: curl or wget is required to download Distrobox.\nPlease install either curl or wget and try again.\n';
-            logToFrontend(msg);
+            const msg = 'Error: curl or wget is required to download Distrobox.\nPlease install either curl or wget and try again.';
+            logError('SETUP: ' + msg);
+            logToFrontend(msg + '\n');
             throw new Error('curl or wget not found.');
         }
+        logInfo(`SETUP: Found required download tool (${curlExists ? 'curl' : 'wget'}).`);
         logToFrontend('--- Found required download tool. ---\n');
 
         const distroboxInstallScript = curlExists
@@ -87,13 +98,32 @@ function registerSystemHandlers(mainWindow) {
 
         const fullDistroboxCommand = `${distroboxInstallScript} | sh -s -- --prefix ~/.local`;
 
+        logInfo('SETUP: Installing/Updating Distrobox...');
         logToFrontend('--- Installing/Updating Distrobox... ---\n');
         try {
             await runCommandStreamed('sh', ['-c', `set -eo pipefail; ${fullDistroboxCommand}`], logToFrontend);
-            logToFrontend('\n--- Distrobox installed/updated successfully. ---\n\nSetup finished successfully!\n');
+            logInfo('SETUP: Distrobox installation script completed.');
         } catch (err) {
+            logError('SETUP: Distrobox installation failed.', err.message);
             logToFrontend(`--- Distrobox installation failed: ${err.message} ---\n`);
             throw err;
+        }
+        
+        // Final verification step
+        logInfo('SETUP: Verifying installations...');
+        logToFrontend('\n--- Verifying installations... ---\n');
+        const podmanFinalCheck = await commandExists('podman');
+        const distroboxFinalCheck = await commandExists('distrobox');
+
+        if (podmanFinalCheck && distroboxFinalCheck) {
+            logInfo('SETUP: Verification successful. Both podman and distrobox are found.');
+            logToFrontend('--- Verification successful. Both podman and distrobox are found. ---\n');
+            logToFrontend('--- Setup finished successfully! ---\n');
+        } else {
+            const errorMsg = `Verification failed after installation. Podman found: ${podmanFinalCheck}, Distrobox found: ${distroboxFinalCheck}. A manual shell restart may be required. Please check the application logs for more details.`;
+            logError('SETUP: ' + errorMsg);
+            logToFrontend(`--- ERROR: ${errorMsg} ---\n`);
+            throw new Error(errorMsg);
         }
     });
     

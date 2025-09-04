@@ -47,12 +47,36 @@ function registerLogHandlers() {
 }
 // --- END LOGGER ---
 
-// Helper function to check if a command exists
+/**
+ * A robust helper to check if a command exists in the user's login shell environment.
+ * @param {string} command The command to check for.
+ * @returns {Promise<boolean>} A promise that resolves to true if the command exists, false otherwise.
+ */
 const commandExists = (command) => {
+  // A simple command name shouldn't contain problematic characters, but sanitize anyway.
+  const sanitizedCommand = String(command).replace(/[^a-zA-Z0-9-_\.]/g, '');
+  if (!sanitizedCommand) return Promise.resolve(false);
+  
   return new Promise((resolve) => {
-    exec(`command -v ${command}`, (error) => resolve(!error));
+    // Use `command -v` which is a POSIX standard way to check for executables.
+    // Redirect stdout and stderr to /dev/null to keep the check clean.
+    // The check runs in a login shell (`-l`) to ensure the user's full PATH is loaded,
+    // which is crucial for finding binaries installed in places like ~/.local/bin (e.g., by distrobox's install script).
+    const commandString = `command -v ${sanitizedCommand} &>/dev/null`;
+    const child = spawn('/bin/bash', ['-l', '-c', commandString]);
+    
+    child.on('close', (code) => {
+        resolve(code === 0);
+    });
+    
+    child.on('error', (err) => {
+        // This is a fail-safe for critical errors like /bin/bash not being found.
+        logError(`Spawn failed when checking for command "${sanitizedCommand}"`, err.message);
+        resolve(false);
+    });
   });
 };
+
 
 /**
  * Checks if a systemd user service is enabled.
