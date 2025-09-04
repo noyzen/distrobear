@@ -49,10 +49,10 @@ function registerSystemHandlers(mainWindow) {
         const isPodmanInstalled = await commandExists('podman');
         if (!isPodmanInstalled) {
             if (!pmDetected) {
-                const msg = 'Error: Podman is not installed, and could not detect a supported package manager (apt, dnf, pacman, zypper) to install it.';
+                const msg = 'Error: Podman is not installed, and a supported package manager (apt, dnf, pacman, zypper) was not found. Please install Podman manually using your distribution\'s software manager, then try again.';
                 logError('SETUP: ' + msg);
                 logToFrontend(msg + '\n');
-                throw new Error('Unsupported package manager.');
+                throw new Error('Unsupported package manager for automatic Podman installation.');
             }
 
             logInfo(`SETUP: Podman not found. Using sudo to run: ${installCommand}`);
@@ -166,7 +166,8 @@ function registerSystemHandlers(mainWindow) {
             }
         };
 
-        const distroboxVersion = await getVersion('distrobox', ['--version'], /distrobox version: (\S+)/);
+        // More robust regex to handle various "distrobox --version" output formats
+        const distroboxVersion = await getVersion('distrobox', ['--version'], /distrobox(?: version)?: (\S+)/);
         const podmanVersion = await getVersion('podman', ['--version'], /version (\S+)/);
 
         return { distrobox: distroboxVersion, podman: podmanVersion };
