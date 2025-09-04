@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ToggleSwitch from '../components/ToggleSwitch';
 import DistroIcon from '../components/DistroLogo';
 import CreationModal from '../components/create-container/CreationModal';
-import { MagnifyingGlassIcon, PlusIcon, TrashIcon } from '../components/Icons';
+import { MagnifyingGlassIcon, PlusIcon, TrashIcon, ArrowDownTrayIcon } from '../components/Icons';
 
 // --- Animation Variants ---
 const gridContainerVariants = {
@@ -157,8 +157,23 @@ const CreateContainer: React.FC<{ setCurrentPage: (page: Page) => void }> = ({ s
             <div className="overflow-y-auto" style={{ maxHeight: '40vh' }}>
                 {isLoading && <p className="text-center text-gray-400 p-8 animate-pulse">Loading images...</p>}
                 {error && <p className="text-center text-red-400 p-8">{error}</p>}
-                {!isLoading && !error && filteredImages.length === 0 && (
-                    <p className="text-center text-gray-500 p-8">No images found.</p>
+                {!isLoading && !error && images.length === 0 && (
+                    <div className="text-center py-10">
+                        <p className="text-gray-400 text-lg">No Local Images Available</p>
+                        <p className="text-gray-500 mt-2 mb-4">You must first download or import an image to create a container.</p>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setCurrentPage('download-images')}
+                            className="flex items-center justify-center gap-2 mx-auto px-6 py-2 bg-accent text-white font-bold rounded-lg hover:bg-accent-light transition-all duration-200"
+                        >
+                            <ArrowDownTrayIcon className="w-5 h-5" />
+                            Go to Downloads
+                        </motion.button>
+                    </div>
+                )}
+                {!isLoading && !error && images.length > 0 && filteredImages.length === 0 && (
+                    <p className="text-center text-gray-500 p-8">No images match your search query.</p>
                 )}
                 <motion.div 
                   className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3"

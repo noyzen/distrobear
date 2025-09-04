@@ -42,8 +42,10 @@ const ImageRow: React.FC<ImageRowProps> = ({ image, onActionComplete, onActionSt
     try {
         const result = await window.electronAPI.imageExport(imageIdentifier);
         if (result.success) {
+            // Success message is handled by the parent
             onActionComplete();
         } else {
+            // Don't show an error for user cancellation
             if (result.message && !result.message.includes('canceled')) {
                 onActionError(result.message);
             }

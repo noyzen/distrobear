@@ -66,7 +66,7 @@ const App: React.FC = () => {
       case 'create-new':
         return <CreateContainer setCurrentPage={setCurrentPage} />;
       case 'local-images':
-        return <LocalImages />;
+        return <LocalImages setCurrentPage={setCurrentPage} />;
       case 'download-images':
         return <DownloadImages />;
       case 'logs':
