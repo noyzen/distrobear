@@ -47,6 +47,15 @@ function registerLogHandlers() {
 }
 // --- END LOGGER ---
 
+// Create a shared environment configuration that ensures ~/.local/bin is in the PATH.
+// This is crucial for finding distrobox immediately after its installation script runs,
+// without requiring the user to restart the application or their shell.
+const commandEnv = {
+  ...process.env,
+  PATH: `${path.join(os.homedir(), '.local', 'bin')}:${process.env.PATH || ''}`,
+};
+
+
 /**
  * A robust helper to check if a command exists in the user's login shell environment.
  * @param {string} command The command to check for.
@@ -60,10 +69,8 @@ const commandExists = (command) => {
   return new Promise((resolve) => {
     // Use `command -v` which is a POSIX standard way to check for executables.
     // Redirect stdout and stderr to /dev/null to keep the check clean.
-    // The check runs in a login shell (`-l`) to ensure the user's full PATH is loaded,
-    // which is crucial for finding binaries installed in places like ~/.local/bin (e.g., by distrobox's install script).
     const commandString = `command -v ${sanitizedCommand} &>/dev/null`;
-    const child = spawn('/bin/bash', ['-l', '-c', commandString]);
+    const child = spawn('/bin/bash', ['-l', '-c', commandString], { env: commandEnv });
     
     child.on('close', (code) => {
         resolve(code === 0);
@@ -107,7 +114,7 @@ function runCommandStreamed(command, args = [], onData, onProcess) {
   return new Promise((resolve, reject) => {
     const commandString = [command, ...args.map(a => `'${a}'`)].join(' ');
 
-    const child = spawn('/usr/bin/env', ['-u', 'npm_config_prefix', '/bin/bash', '-l', '-c', commandString]);
+    const child = spawn('/usr/bin/env', ['-u', 'npm_config_prefix', '/bin/bash', '-l', '-c', commandString], { env: commandEnv });
     
     if (onProcess) {
         onProcess(child);
@@ -153,7 +160,7 @@ function runCommand(command, args = [], options = {}) {
     const commandString = [command, ...args.map(a => `'${a}'`)].join(' ');
     logInfo(`Executing command:`, `${command} ${args.join(' ')}`);
 
-    const child = spawn('/usr/bin/env', ['-u', 'npm_config_prefix', '/bin/bash', '-l', '-c', commandString]);
+    const child = spawn('/usr/bin/env', ['-u', 'npm_config_prefix', '/bin/bash', '-l', '-c', commandString], { env: commandEnv });
 
     let stdout = '';
     let stderr = '';
