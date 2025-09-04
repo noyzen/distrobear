@@ -1,5 +1,7 @@
 const { ipcMain } = require('electron');
 const os = require('os');
+const path = require('path');
+const fs = require('fs').promises;
 const sudo = require('sudo-prompt');
 const { commandExists, runCommand, runCommandStreamed, detectTerminalEmulator, logInfo, logWarn, logError } = require('../utils');
 
@@ -113,14 +115,28 @@ function registerSystemHandlers(mainWindow) {
         logInfo('SETUP: Verifying installations...');
         logToFrontend('\n--- Verifying installations... ---\n');
         const podmanFinalCheck = await commandExists('podman');
-        const distroboxFinalCheck = await commandExists('distrobox');
+        
+        const distroboxBinaryPath = path.join(os.homedir(), '.local', 'bin', 'distrobox');
+        let distroboxFinalCheck = false;
+        try {
+            // Check if the file exists and is executable
+            await fs.access(distroboxBinaryPath, fs.constants.X_OK);
+            distroboxFinalCheck = true;
+            logInfo(`SETUP: Verification successful. Found distrobox executable at: ${distroboxBinaryPath}`);
+            logToFrontend(`--- Distrobox executable found at ${distroboxBinaryPath}. ---\n`);
+        } catch (e) {
+            logWarn(`SETUP: Could not find executable at ${distroboxBinaryPath}. Falling back to PATH check.`);
+            logToFrontend(`--- Could not find distrobox at the standard install path. Checking your system PATH... ---\n`);
+            distroboxFinalCheck = await commandExists('distrobox');
+        }
+
 
         if (podmanFinalCheck && distroboxFinalCheck) {
-            logInfo('SETUP: Verification successful. Both podman and distrobox are found.');
+            logInfo('SETUP: Verification successful. Both podman and distrobox are now available.');
             logToFrontend('--- Verification successful. Both podman and distrobox are found. ---\n');
             logToFrontend('--- Setup finished successfully! ---\n');
         } else {
-            const errorMsg = `Verification failed after installation. Podman found: ${podmanFinalCheck}, Distrobox found: ${distroboxFinalCheck}. A manual shell restart may be required. Please check the application logs for more details.`;
+            const errorMsg = `Verification failed after installation. Podman found: ${podmanFinalCheck}, Distrobox found: ${distroboxFinalCheck}. Your shell PATH may not include "~/.local/bin". A manual shell restart or logout/login may be required.`;
             logError('SETUP: ' + errorMsg);
             logToFrontend(`--- ERROR: ${errorMsg} ---\n`);
             throw new Error(errorMsg);
