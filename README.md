@@ -2,9 +2,9 @@
 
 A friendly desktop GUI to manage your [distrobox](https://distrobox.it/) containers.
 
-
-
 DistroBear simplifies the management of `distrobox` containers by providing an intuitive graphical interface. It's perfect for both new users who are just getting started with `distrobox` and experienced users who want a quicker, more visual way to interact with their containers.
+
+
 
 ---
 
